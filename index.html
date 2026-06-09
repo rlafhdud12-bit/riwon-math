@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ff9f43">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="리원수학">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
+<title>리원이 수학 놀이터 🧮</title>
+<style>
+  :root{ --c:#ff9f43; --c-dark:#e67e22; --bg:#fff9f0; --ink:#33323a; --soft:#7a7785; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕',system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); min-height:100vh; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:16px 16px calc(64px + env(safe-area-inset-bottom));}
+  h1,h2,h3{margin:0;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+
+  /* 홈 */
+  .home-head{text-align:center; padding:10px 0 4px;}
+  .home-head .big{font-size:28px; font-weight:900; letter-spacing:-1px;}
+  .home-head .sub{color:var(--soft); font-size:14px; margin-top:4px;}
+  .topwallet{display:flex; gap:8px; justify-content:center; margin:12px 0 4px; flex-wrap:wrap;}
+  .wpill{background:#fff; border:2px solid #eee; border-radius:14px; padding:7px 13px; font-weight:800; font-size:14px; box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .unit-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
+  .unit-card{border-radius:22px; padding:16px 14px; color:#fff; box-shadow:0 8px 18px rgba(0,0,0,.12);
+    text-align:left; transition:transform .12s; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; position:relative;}
+  .unit-card:active{transform:scale(.96);}
+  .unit-card .emoji{font-size:36px; line-height:1;}
+  .unit-card .uname{font-size:19px; font-weight:900; margin-top:6px;}
+  .unit-card .usub{font-size:12px; opacity:.92; margin-top:2px; font-weight:600;}
+  .unit-card .clr{position:absolute; top:10px; right:12px; font-size:12px; font-weight:800; background:rgba(255,255,255,.25); padding:2px 8px; border-radius:10px;}
+  .home-btns{display:flex; gap:10px; margin-top:14px;}
+  .home-btns button{flex:1; background:#fff; border:2px solid #eee; border-radius:18px; padding:14px; font-weight:800; font-size:15px; color:var(--ink); box-shadow:0 4px 10px rgba(0,0,0,.06);}
+  .credit{text-align:center; color:var(--soft); font-size:12px; margin-top:18px; line-height:1.7;}
+
+  /* 단원 */
+  .topbar{display:flex; align-items:center; gap:10px; padding:6px 0 12px;}
+  .back{background:#fff; border:2px solid #eee; border-radius:14px; width:46px; height:46px; font-size:20px; font-weight:900; color:var(--c-dark); box-shadow:0 3px 8px rgba(0,0,0,.06); flex:0 0 auto;}
+  .topbar .t{font-size:20px; font-weight:900;}
+  .topbar .t .e{margin-right:6px;}
+  .topbar .spacer{flex:1;}
+  .topbar .mini{background:#fff; border:2px solid #eee; border-radius:12px; padding:6px 10px; font-weight:800; font-size:13px;}
+  .stages{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px;}
+  .stage-btn{flex:1 1 28%; min-width:86px; padding:9px 2px; border-radius:14px; font-weight:800; font-size:13px; background:#fff; color:var(--soft); border:2px solid #eee; box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .stage-btn.active{background:var(--c); color:#fff; border-color:var(--c); box-shadow:0 5px 14px rgba(0,0,0,.16);}
+  .stage-btn .num{display:block; font-size:10px; opacity:.8; font-weight:700;}
+
+  .card{background:#fff; border-radius:22px; padding:18px 16px; box-shadow:0 6px 16px rgba(0,0,0,.07); margin-bottom:14px;}
+  .card h3{font-size:17px; color:var(--c-dark); margin-bottom:8px; display:flex; align-items:center; gap:7px;}
+  .card p{margin:0 0 9px; font-size:15px;}
+  .card p:last-child{margin-bottom:0;}
+  .method-tag{display:inline-block; background:var(--bg); color:var(--c-dark); font-weight:800; font-size:12px; padding:3px 10px; border-radius:10px; margin-bottom:8px;}
+  .hl{background:linear-gradient(transparent 55%, color-mix(in srgb, var(--c) 35%, white) 55%); font-weight:800; padding:0 2px;}
+  .formula{background:var(--bg); border:2px dashed color-mix(in srgb,var(--c) 50%, white); border-radius:14px; padding:12px 14px; text-align:center; font-size:18px; font-weight:900; color:var(--c-dark); margin:10px 0;}
+  .tipbox{background:#fffbe9; border-left:5px solid #ffd84d; border-radius:10px; padding:10px 12px; font-size:14px; margin-top:10px;}
+  .tipbox b{color:#c8920a;}
+
+  /* 서브탭(그림게임 종류) */
+  .subtabs{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px;}
+  .subtab{background:#fff; border:2px solid #eee; border-radius:14px; padding:8px 12px; font-weight:800; font-size:13.5px; color:var(--soft); box-shadow:0 3px 8px rgba(0,0,0,.04);}
+  .subtab.active{background:var(--c); color:#fff; border-color:var(--c);}
+
+  /* 개념게임 공통 */
+  .cg-tip{font-size:15px; font-weight:700; text-align:center; margin:0 0 12px;}
+  .cg-tip b{color:var(--c-dark);}
+  .ctrl-row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:14px;}
+  .ctrl{background:#fff; border:2px solid #eee; border-radius:16px; padding:8px 10px; display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .ctrl .lbl{color:var(--soft);}
+  .stepbtn{width:38px; height:38px; border-radius:12px; background:var(--c); color:#fff; font-size:22px; font-weight:900; line-height:1;}
+  .stepbtn:active{transform:scale(.9);}
+  .ctrl .val{min-width:26px; text-align:center; font-size:20px; color:var(--c-dark);}
+  .cg-eq{text-align:center; font-size:20px; font-weight:900; margin-top:14px; color:var(--ink);}
+  .cg-eq .big{color:var(--c-dark); font-size:25px;}
+
+  .m-board{display:flex; flex-direction:column; gap:10px; min-height:50px;}
+  .m-group{display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-radius:16px; background:var(--bg); border:2px dashed color-mix(in srgb,var(--c) 45%, white);}
+  .crit{font-size:28px; line-height:1; animation:pop .35s ease both;}
+  @keyframes pop{0%{transform:scale(0) rotate(-20deg); opacity:0;} 70%{transform:scale(1.25);} 100%{transform:scale(1); opacity:1;}}
+
+  .arr-grid{display:grid; gap:6px; justify-content:center; margin:6px auto;}
+  .dot{width:26px; height:26px; border-radius:50%; background:var(--c); animation:pop .3s ease both;}
+
+  .nl-wrap{overflow-x:auto; padding:6px 0;}
+  .plates{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+  .plate{width:88px; min-height:88px; border-radius:50%/40%; background:#f1f0f5; border:3px solid #e2e0ea; display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:3px; padding:8px;}
+  .plate .crit{font-size:22px;}
+  .plate-cap{text-align:center; font-weight:800; font-size:13px; color:var(--soft); margin-top:4px;}
+  .box{width:84px; min-height:60px; border:3px solid var(--c); border-radius:12px; background:var(--bg); display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:2px; padding:6px;}
+  .box .crit{font-size:20px;}
+
+  .frac-wrap{text-align:center;}
+  .frac-cmp{display:flex; justify-content:center; gap:8px; align-items:flex-end; margin-top:8px; flex-wrap:wrap;}
+  .frac-cmp .col{text-align:center;}
+  .frac-disp{font-size:22px; font-weight:900; color:var(--c-dark);}
+  .frac-disp .l{display:inline-flex; flex-direction:column; line-height:1; vertical-align:middle; font-size:24px;}
+  .frac-disp .l .n{border-bottom:3px solid var(--c-dark); padding:0 6px;}
+  .bar-cells{display:flex; border:3px solid var(--c-dark); border-radius:10px; overflow:hidden; max-width:300px; margin:8px auto;}
+  .bar-cells > div{flex:1; height:46px; cursor:pointer;}
+
+  .ruler{position:relative; height:70px; background:#fff3d6; border:2px solid #f0c965; border-radius:10px; margin:6px 0 4px; overflow:hidden;}
+  .ruler .fill{position:absolute; left:0; top:0; bottom:0; background:color-mix(in srgb,var(--c) 35%, white);}
+  .tick{position:absolute; top:0; width:2px; background:#caa64a;}
+  .tick.cm{height:30px; background:#a07a18;}
+  .tick .n{position:absolute; top:32px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:800; color:#8a6a14;}
+  .seg-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px;}
+  .seg{background:color-mix(in srgb,var(--c) 30%, white); border:2px solid var(--c); border-radius:10px; padding:6px 8px; font-weight:800; color:var(--c-dark); font-size:13px;}
+
+  .beaker{width:120px; height:170px; margin:0 auto; border:4px solid #9fc6e8; border-top:none; border-radius:0 0 22px 22px; position:relative; background:#f2f9ff; overflow:hidden;}
+  .beaker .liquid{position:absolute; left:0; right:0; bottom:0; background:linear-gradient(#56b0f5,#2e86de); transition:height .35s;}
+  .beaker .mark{position:absolute; left:0; right:0; height:0; border-top:2px dashed #9fc6e8;}
+  .beaker .mark span{position:absolute; right:4px; top:-9px; font-size:10px; font-weight:800; color:#3a7ab5; background:#f2f9ff; padding:0 3px;}
+  .scale-read{font-size:22px; font-weight:900; color:var(--c-dark); text-align:center; margin-top:8px;}
+  .scale-beam{height:10px; background:#bbb; border-radius:6px; margin:14px auto 0; max-width:240px; transform-origin:center; transition:transform .4s;}
+
+  /* 퀴즈/문제은행/복습 */
+  .quiz-top{display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:10px; font-weight:800;}
+  .score-pill{background:#fff; border:2px solid #eee; border-radius:14px; padding:6px 11px; font-size:13.5px; box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .progress{height:16px; background:#ececf3; border-radius:10px; overflow:hidden; margin-bottom:14px;}
+  .progress .bar{height:100%; width:0; background:linear-gradient(90deg,var(--c),var(--c-dark)); transition:width .4s; border-radius:10px;}
+  .q-card{background:#fff; border-radius:22px; padding:20px 16px; box-shadow:0 6px 16px rgba(0,0,0,.08); text-align:center; min-height:120px;}
+  .q-retry{display:inline-block; background:#ffe7d1; color:var(--c-dark); font-weight:800; font-size:13px; padding:3px 10px; border-radius:12px; margin-bottom:10px;}
+  .q-text{font-size:24px; font-weight:900; letter-spacing:-.5px;}
+  .q-text .b{color:var(--c-dark);}
+  .q-visual{margin:12px 0 4px;}
+  .ans-box{margin:16px auto 4px; width:160px; height:58px; border-radius:16px; border:3px solid var(--c); background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:900; color:var(--c-dark);}
+  .ans-box.empty{color:#cfc8bd;}
+  .feedback{min-height:26px; font-weight:800; font-size:16px; margin:10px 0 2px;}
+  .feedback.ok{color:#19a974;}
+  .feedback.no{color:#e8503a;}
+  .hintbox{background:#fffbe9; border:2px solid #ffe08a; border-radius:14px; padding:12px 14px; font-size:15px; font-weight:600; color:#8a6a14; margin-top:10px; display:none;}
+  .hintbox.show{display:block; animation:pop .3s ease;}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:16px;}
+  .key{background:#fff; border:2px solid #eee; border-radius:16px; padding:15px 0; font-size:24px; font-weight:900; color:var(--ink); box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .key:active{transform:scale(.94); background:var(--bg);}
+  .key.del{color:#e8503a; font-size:20px;}
+  .key.ok{background:var(--c); color:#fff; border-color:var(--c); font-size:19px;}
+  .stopbtn{background:#fff; border:2px solid var(--c); color:var(--c-dark); border-radius:14px; padding:6px 12px; font-size:14px; font-weight:800;}
+
+  /* 분석 */
+  .cat-row{margin-bottom:10px;}
+  .cat-row .lab{display:flex; justify-content:space-between; font-weight:800; font-size:14px;}
+  .cat-row .sub{font-size:12px; color:var(--soft);}
+  .dash-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .dash-stat{background:var(--bg); border-radius:16px; padding:12px; text-align:center;}
+  .dash-stat .v{font-size:22px; font-weight:900; color:var(--c-dark);}
+  .dash-stat .k{font-size:12px; color:var(--soft); font-weight:700;}
+  .logrow{display:flex; justify-content:space-between; font-size:13px; padding:7px 0; border-bottom:1px solid #f0eee9;}
+  .logrow .d{color:var(--soft);}
+
+  /* 결과 */
+  .result{text-align:center; padding:8px 0;}
+  .result .stars{font-size:44px; letter-spacing:6px;}
+  .result h2{font-size:23px; margin:8px 0;}
+  .result .msg{font-size:16px; color:var(--soft); margin-bottom:12px;}
+  .result .stat{display:inline-block; background:var(--bg); border-radius:14px; padding:10px 16px; margin:4px; font-weight:800; font-size:15px;}
+  .reward-banner{background:linear-gradient(135deg,#fff3d6,#ffe0ea); border-radius:18px; padding:14px; margin:6px 0 4px; font-weight:900; font-size:18px; color:var(--c-dark);}
+  .bigbtn{display:block; width:100%; margin-top:12px; padding:16px; border-radius:18px; background:var(--c); color:#fff; font-size:18px; font-weight:900; box-shadow:0 6px 16px rgba(0,0,0,.16);}
+  .bigbtn.ghost{background:#fff; color:var(--c-dark); border:2px solid var(--c);}
+  .bigbtn:active{transform:scale(.98);}
+
+  /* 아이돌 카드 */
+  .gallery{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .idol-card{border-radius:18px; overflow:hidden; box-shadow:0 5px 14px rgba(0,0,0,.12); background:#fff; position:relative;}
+  .idol-card .idol-art{aspect-ratio:1/1.15; background:linear-gradient(160deg,var(--g2),var(--g1)); display:flex; align-items:center; justify-content:center;}
+  .idol-card.locked .idol-art{background:#e9e7f0; filter:grayscale(1);}
+  .idol-card .idol-art svg{width:86%; height:86%;}
+  .idol-card .lock{font-size:30px;}
+  .idol-card .idol-name{text-align:center; font-weight:900; font-size:13px; padding:6px 2px 2px;}
+  .idol-card .idol-cost{text-align:center; font-size:11px; color:var(--soft); padding-bottom:7px; font-weight:700;}
+
+  /* 응원 팝업 */
+  .idol-pop{position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom)); transform:translate(-50%,140%); z-index:120;
+    display:flex; align-items:flex-end; gap:8px; pointer-events:none; transition:transform .4s cubic-bezier(.2,1.3,.4,1); width:min(420px,92vw);}
+  .idol-pop.show{transform:translate(-50%,0);}
+  .idol-pop .pop-art{width:74px; height:74px; border-radius:16px; background:linear-gradient(160deg,#ffd3e0,#ffe9b0); flex:0 0 auto; box-shadow:0 6px 16px rgba(0,0,0,.18); overflow:hidden;}
+  .idol-pop .pop-art svg{width:100%; height:100%;}
+  .idol-pop .pop-bubble{background:#fff; border:2px solid var(--c); border-radius:16px 16px 16px 4px; padding:10px 14px; font-weight:800; font-size:15px; box-shadow:0 6px 16px rgba(0,0,0,.14); color:var(--ink);}
+  .idol-pop .pop-bubble b{color:var(--c-dark);}
+
+  /* 꽃가루 */
+  #confetti{position:fixed; inset:0; pointer-events:none; z-index:99; overflow:hidden;}
+  .conf{position:absolute; width:10px; height:14px; top:-20px; border-radius:2px; animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg); opacity:.9;}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="confetti"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   리원이 수학 놀이터 v2
+   개념(다양한 방법) → 그림게임(여러 종류) → 퀴즈 → 문제은행 → 복습/분석
+   + 스티커/경험치(반복 보상 체감) + 아이돌 캐릭터 카드 수집 + 응원 팝업
+   + 공부 기록(부모용 대시보드) + on-device 저장 + PWA(오프라인/홈화면)
+   외부 라이브러리 없음. 아이돌 캐릭터는 모두 오리지널 일러스트(저작권 무관).
+   ========================================================= */
+
+const UNITS = [
+  {id:'mul',  emoji:'🐸', name:'곱셈',        sub:'몇 배로 늘어나기',  c:'#ff9f43', cd:'#e67e22'},
+  {id:'div',  emoji:'🍪', name:'나눗셈',      sub:'똑같이 나누기',     c:'#ee5253', cd:'#c0392b'},
+  {id:'frac', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f'},
+  {id:'len',  emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6'},
+  {id:'cap',  emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf'},
+];
+
+const $ = (s,el=document)=>el.querySelector(s);
+const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick = a=>a[Math.floor(Math.random()*a.length)];
+const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const app = document.getElementById('app');
+
+let timers=[];
+function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
+
+/* ===================== 저장 (on-device) ===================== */
+const SKEY='riwon_math_v2';
+let DB=loadDB();
+function freshDB(){ return {v:2, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units) return d; }catch(e){} return freshDB(); }
+function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
+function unitDB(id){ return DB.units[id] = DB.units[id] || {clears:0, solved:0, correct:0, wrong:0, cats:{}, bank:0, review:0}; }
+
+/* 통계 기록 */
+function markStat(unitId,cat,ok){
+  const u=unitDB(unitId);
+  const c=u.cats[cat]=u.cats[cat]||{seen:0,wrong:0};
+  c.seen++; if(!ok)c.wrong++;
+  u.solved++; if(ok)u.correct++; else u.wrong++;
+  DB.totalSolved++; if(ok)DB.totalCorrect++;
+}
+function addWrong(c){
+  const key=c.unitId+'|'+c.q;
+  const e=DB.wrong.find(w=>w.key===key);
+  if(e) e.miss++;
+  else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, miss:1});
+}
+function removeFromWrong(c){
+  const key=c.key||(c.unitId+'|'+c.q);
+  const i=DB.wrong.findIndex(w=>w.key===key); if(i>=0) DB.wrong.splice(i,1);
+}
+function worstCat(unitId){
+  const st=unitDB(unitId).cats; let best=null,bw=0;
+  for(const c in st){ if(st[c].wrong>bw){bw=st[c].wrong;best=c;} }
+  return best;
+}
+function logEvent(unitId,kind,n){ DB.log.unshift({t:Date.now(),u:unitId,k:kind,n:n||1}); if(DB.log.length>60)DB.log.length=60; }
+
+/* ===================== 보상(스티커/경험치) ===================== */
+const CLEAR_REWARD=[10,8,6,4,2]; // 그 이후로는 1개씩 (반복 복습 방지 + 새로운 학습 장려)
+function rewardForClear(n){ return n<CLEAR_REWARD.length?CLEAR_REWARD[n]:1; }
+function addStickers(n){ if(n<=0)return; DB.stickers+=n; DB.stickersEver+=n; }
+
+/* ===================== 아이돌 카드 (오리지널 캐릭터) ===================== */
+const GROUP='드림스타 ✨';
+const ROSTER=[
+  {name:'별이',  hair:'#ffd24d', outfit:'#ff7aa2', acc:'⭐', cost:10,  line:'리원아, 별처럼 반짝이는 두뇌야! ⭐'},
+  {name:'하나',  hair:'#ff8fb1', outfit:'#7ad0ff', acc:'🎀', cost:24,  line:'하나하나 차근차근, 넌 잘하고 있어! 🎀'},
+  {name:'라라',  hair:'#9b8cff', outfit:'#ffd24d', acc:'🎵', cost:42,  line:'라라라~ 수학이 노래처럼 즐거워지지? 🎵'},
+  {name:'미미',  hair:'#6ce0c0', outfit:'#ff9f43', acc:'💎', cost:64,  line:'반짝반짝, 미미는 리원이 팬이야! 💎'},
+  {name:'소이',  hair:'#ffb36b', outfit:'#a78bfa', acc:'🌸', cost:90,  line:'소이가 응원해, 한 걸음씩 가자! 🌸'},
+  {name:'유나',  hair:'#7ad0ff', outfit:'#ff7aa2', acc:'💙', cost:120, line:'유나는 포기 안 하는 네가 제일 멋져! 💙'},
+  {name:'보라',  hair:'#b18cff', outfit:'#6ce0c0', acc:'💜', cost:155, line:'보랏빛 무대처럼, 넌 주인공이야! 💜'},
+  {name:'코코',  hair:'#ff9f6b', outfit:'#ffd24d', acc:'🍫', cost:195, line:'코코랑 달콤하게 한 문제 더! 🍫'},
+  {name:'민트',  hair:'#71e0b8', outfit:'#7ad0ff', acc:'🌿', cost:240, line:'민트처럼 상쾌하게, 집중 좋아! 🌿'},
+  {name:'루비',  hair:'#ff6f91', outfit:'#9b8cff', acc:'❤️', cost:290, line:'루비처럼 빛나는 노력! 최고야 ❤️'},
+  {name:'초아',  hair:'#ffd24d', outfit:'#71e0b8', acc:'✨', cost:345, line:'초아는 알아, 넌 매일 자라고 있어 ✨'},
+  {name:'달이',  hair:'#a9b4ff', outfit:'#ff9f43', acc:'🌙', cost:410, line:'달이랑 끝까지! 오늘도 수고했어 🌙'},
+];
+function idolFace(c){
+  return `<svg viewBox="0 0 120 150">
+    <ellipse cx="60" cy="60" rx="42" ry="44" fill="${c.hair}"/>
+    <circle cx="22" cy="70" r="15" fill="${c.hair}"/>
+    <circle cx="98" cy="70" r="15" fill="${c.hair}"/>
+    <ellipse cx="60" cy="64" rx="31" ry="33" fill="#ffe0c2"/>
+    <path d="M29,52 Q60,18 91,52 Q90,38 60,30 Q30,38 29,52 Z" fill="${c.hair}"/>
+    <ellipse cx="48" cy="64" rx="6" ry="8" fill="#3a2a2a"/>
+    <ellipse cx="72" cy="64" rx="6" ry="8" fill="#3a2a2a"/>
+    <circle cx="50" cy="61" r="2" fill="#fff"/><circle cx="74" cy="61" r="2" fill="#fff"/>
+    <circle cx="40" cy="77" r="5" fill="#ff9bb3" opacity=".6"/>
+    <circle cx="80" cy="77" r="5" fill="#ff9bb3" opacity=".6"/>
+    <path d="M52,81 Q60,89 68,81" stroke="#b5536b" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M30,66 Q25,93 56,97" stroke="#444" stroke-width="3" fill="none"/>
+    <circle cx="58" cy="97" r="4" fill="#ff5a7a"/>
+    <path d="M28,118 Q60,98 92,118 L96,150 L24,150 Z" fill="${c.outfit}"/>
+    <text x="84" y="40" font-size="17">${c.acc}</text>
+  </svg>`;
+}
+function checkCardUnlocks(){
+  const newly=[];
+  ROSTER.forEach((c,i)=>{ if(DB.stickersEver>=c.cost && DB.cards.indexOf(i)<0){ DB.cards.push(i); newly.push(i); } });
+  return newly;
+}
+
+/* ===================== 응원 팝업 ===================== */
+const LINES={
+  streak:['{n}문제 연속 정답! 불났어 🔥','연속 {n}개! 집중력 최고 ✨','와 {n}연속! 멈추지 마 💪','{n}개 연속이라니 진짜 잘한다 💖'],
+  comeback:['다시 도전해서 맞혔어! 이게 진짜 실력 👏','틀려도 포기 안 하니까 결국 해냈네 🌟','복습의 힘! 완전 멋져 💖','어려운 걸 다시 맞혔어, 대단해!'],
+  praise:['잘하고 있어 리원아 💕','오, 정확해! ✨','좋았어, 그거야!','리원이 똑똑해 🧠💖','이 속도면 금방 마스터!','집중력 멋지다 👍'],
+  clear:['한 단원 클리어! 너무 자랑스러워 🏆','챕터 깼다! 리원이 짱 💖','오늘도 해냈어, 최고야 ✨'],
+};
+let popupTimer=null, lastPopupAt=0;
+function activeIdol(){ return DB.cards.length? ROSTER[pick(DB.cards)] : ROSTER[0]; }
+function idolPopup(msg, big, forceIdol){
+  const c=forceIdol||activeIdol();
+  let el=document.getElementById('popup');
+  if(!el){ el=document.createElement('div'); el.id='popup'; el.className='idol-pop'; document.body.appendChild(el); }
+  el.innerHTML=`<div class="pop-art">${idolFace(c)}</div><div class="pop-bubble"><b>${c.name}</b><br>${msg}</div>`;
+  void el.offsetWidth; el.classList.add('show');
+  clearTimeout(popupTimer);
+  popupTimer=setTimeout(()=>el.classList.remove('show'), big?3400:2500);
+}
+
+/* ===================== 공부 시간 시계 ===================== */
+let studyTick=null;
+function startStudyClock(){ stopStudyClock(); studyTick=setInterval(()=>{ if(document.visibilityState==='visible'){ DB.studySeconds+=5; saveDB(); } },5000); }
+function stopStudyClock(){ if(studyTick){clearInterval(studyTick); studyTick=null;} }
+
+/* ===================== 라우팅 ===================== */
+function setTheme(u){
+  document.documentElement.style.setProperty('--c', u?u.c:'#ff9f43');
+  document.documentElement.style.setProperty('--c-dark', u?u.cd:'#e67e22');
+}
+function home(){
+  clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); saveDB();
+  const cards=UNITS.map(u=>{ const cl=unitDB(u.id).clears;
+    return `<button class="unit-card" style="background:linear-gradient(135deg,${u.c},${u.cd})" onclick="openUnit('${u.id}')">
+      ${cl>0?`<div class="clr">🏆 ${cl}회</div>`:''}
+      <div class="emoji">${u.emoji}</div>
+      <div><div class="uname">${u.name}</div><div class="usub">${u.sub}</div></div>
+    </button>`; }).join('');
+  app.innerHTML=`
+    <div class="home-head">
+      <div class="big">리원이 수학 놀이터 🧮</div>
+      <div class="sub">개념 → 그림게임 → 퀴즈 → 문제은행 → 복습·분석</div>
+    </div>
+    <div class="topwallet">
+      <span class="wpill">🎟️ 스티커 ${DB.stickers}</span>
+      <span class="wpill">🎴 카드 ${DB.cards.length}/${ROSTER.length}</span>
+      <span class="wpill">📚 ${DB.totalSolved}문제</span>
+    </div>
+    <div class="unit-grid">${cards}</div>
+    <div class="home-btns">
+      <button onclick="renderDashboard()">📊 공부 기록</button>
+      <button onclick="renderGallery()">🎴 카드 모음</button>
+    </div>
+    <div class="credit">새로운 단원을 처음 깨면 스티커가 듬뿍! 같은 걸 반복하면 조금씩 모여요.<br>스티커를 모으면 ${GROUP} 멤버 카드를 한 명씩 만날 수 있어요 💖</div>`;
+}
+
+let curUnit=null, curStage='concept';
+function openUnit(id){ curUnit=UNITS.find(u=>u.id===id); curStage='concept'; setTheme(curUnit); renderUnit(); }
+function setStage(s){ curStage=s; clearTimers(); PLAY=null; renderUnit(); }
+
+function renderUnit(){
+  const u=curUnit; startStudyClock();
+  const stages=[
+    {id:'concept', t:'개념',     n:'STEP 1'},
+    {id:'game',    t:'그림게임', n:'STEP 2'},
+    {id:'quiz',    t:'퀴즈',     n:'STEP 3'},
+    {id:'bank',    t:'문제은행', n:'STEP 4'},
+    {id:'review',  t:'복습·분석', n:'STEP 5'},
+  ];
+  app.innerHTML=`
+    <div class="topbar">
+      <button class="back" onclick="home()">←</button>
+      <div class="t"><span class="e">${u.emoji}</span>${u.name}</div>
+      <div class="spacer"></div>
+      <span class="mini">🎟️ ${DB.stickers}</span>
+    </div>
+    <div class="stages">
+      ${stages.map(s=>`<button class="stage-btn ${curStage===s.id?'active':''}" onclick="setStage('${s.id}')">
+        <span class="num">${s.n}</span>${s.t}</button>`).join('')}
+    </div>
+    <div id="stage-body"></div>`;
+  const body=$('#stage-body');
+  if(curStage==='concept') body.innerHTML=MODULES[u.id].concept();
+  else if(curStage==='game') renderGames(body,u.id);
+  else if(curStage==='quiz') startMaster(u.id,body);
+  else if(curStage==='bank') startBank(u.id,body);
+  else if(curStage==='review') renderReview(body,u.id);
+}
+
+/* 그림게임 서브탭 */
+function renderGames(body,unitId){
+  const list=MODULES[unitId].games;
+  window._gl={unitId,list};
+  body.innerHTML=`${list.length>1?'<div class="subtabs" id="subtabs"></div>':''}<div id="game-host"></div>`;
+  gameTab(0);
+}
+function gameTab(i){
+  const {list}=window._gl;
+  const st=$('#subtabs');
+  if(st) st.innerHTML=list.map((g,k)=>`<button class="subtab ${k===i?'active':''}" onclick="gameTab(${k})">${g.name}</button>`).join('');
+  list[i].build($('#game-host'));
+}
+
+/* ===================== 문제 생성 ===================== */
+function genOne(unitId,g){ const o=g.make(); o.cat=g.cat; o.unitId=unitId; return o; }
+function pickGen(unitId){
+  const gens=MODULES[unitId].gens, st=unitDB(unitId).cats;
+  const w=gens.map(g=>1+2*((st[g.cat]&&st[g.cat].wrong)||0));
+  let sum=w.reduce((a,b)=>a+b,0), r=Math.random()*sum;
+  for(let i=0;i<gens.length;i++){ r-=w[i]; if(r<=0) return gens[i]; }
+  return gens[gens.length-1];
+}
+function buildMasterSet(unitId){
+  const gens=MODULES[unitId].gens, set=[];
+  gens.forEach(g=>{ set.push(genOne(unitId,g)); set.push(genOne(unitId,g)); });
+  return shuffle(set).slice(0, Math.min(14, set.length));
+}
+
+/* ===================== 플레이 엔진 ===================== */
+let PLAY=null;
+function startMaster(unitId,body){
+  const set=buildMasterSet(unitId); set.forEach((s,i)=>s.id=i);
+  PLAY={mode:'master',unitId,body,queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
+  advance();
+}
+function startBank(unitId,body){
+  PLAY={mode:'bank',unitId,body,score:0,streak:0,count:0,wrongCount:0,corr:0,cur:null,buf:'',locked:false};
+  advance();
+}
+function startReview(unitId){
+  const body=$('#stage-body');
+  const pool=DB.wrong.filter(w=>w.unitId===unitId);
+  if(pool.length===0){ renderReview(body,unitId); return; }
+  PLAY={mode:'review',unitId,body,queue:shuffle(pool.map(p=>Object.assign({fromWrong:true},p))),startN:pool.length,fixed:0,score:0,streak:0,corr:0,cur:null,buf:'',locked:false};
+  advance();
+}
+function advance(){
+  const P=PLAY; if(!P)return; P.buf=''; P.locked=false; P.awaitNext=false;
+  if(P.mode==='master'){ if(P.queue.length===0)return finishMaster(); P.cur=P.queue.shift(); renderCard(); }
+  else if(P.mode==='bank'){ P.cur=genOne(P.unitId,pickGen(P.unitId)); renderCard(); }
+  else { if(P.queue.length===0)return finishReview(); P.cur=P.queue.shift(); renderCard(); }
+}
+function renderCard(){
+  const P=PLAY, c=P.cur; let header='';
+  if(P.mode==='master'){
+    const pct=Math.round(P.solved.size/P.total*100);
+    header=`<div class="quiz-top"><span class="score-pill">⭐ ${P.score}</span><span class="score-pill">${P.solved.size}/${P.total} 완료</span><span class="score-pill">🔥 ${P.streak}</span></div>
+      <div class="progress"><div class="bar" style="width:${pct}%"></div></div>`;
+  } else if(P.mode==='bank'){
+    header=`<div class="quiz-top"><span class="score-pill">⭐ ${P.score}</span><span class="score-pill">🔥 연속 ${P.streak}</span><button class="stopbtn" onclick="stopPlay()">그만</button></div>`;
+  } else {
+    header=`<div class="quiz-top"><span class="score-pill">📘 복습</span><span class="score-pill">남은 ${P.queue.length+1}개</span><button class="stopbtn" onclick="stopPlay()">그만</button></div>`;
+  }
+  P.body.innerHTML=header+`
+    <div class="q-card">
+      ${c.retry?'<span class="q-retry">🔁 다시 도전!</span><br>':''}
+      ${c.fromWrong?'<span class="q-retry">📘 복습 문제</span><br>':''}
+      ${c.visual?`<div class="q-visual">${c.visual}</div>`:''}
+      <div class="q-text">${c.q}</div>
+      <div class="ans-box empty" id="ans">?</div>
+      <div class="feedback" id="fb"></div>
+      <div class="hintbox" id="hint">💡 ${c.hint}</div>
+    </div>
+    <div id="play-controls">
+      ${(P.mode==='bank'||P.mode==='review')?`<button class="bigbtn ghost" style="margin-top:10px" onclick="openHelp()">🙋 도와주세요 — 차근차근 알려줄게</button>`:''}
+      <div class="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(d=>`<button class="key" onclick="press('${d}')">${d}</button>`).join('')}
+        <button class="key del" onclick="press('del')">⌫</button>
+        <button class="key" onclick="press('0')">0</button>
+        <button class="key ok" onclick="press('ok')">확인</button>
+      </div>
+    </div>`;
+}
+function press(k){
+  const P=PLAY; if(!P||!P.cur||P.locked||P.helping)return; const ans=$('#ans');
+  if(k==='del') P.buf=P.buf.slice(0,-1);
+  else if(k==='ok') return submit();
+  else if(P.buf.length<5) P.buf+=k;
+  if(ans){ ans.textContent=P.buf===''?'?':P.buf; ans.classList.toggle('empty',P.buf===''); }
+}
+function submit(){
+  const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
+  const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
+  markStat(P.unitId,c.cat,ok);
+  if(ok){
+    P.locked=true; P.streak++; P.corr++; confetti(false);
+    fb.className='feedback ok'; fb.textContent='정답이에요! 🎉'; $('#ans').style.borderColor='#19a974';
+    if(P.mode==='master'){ P.solved.add(c.id); P.score+=c.retry?3:5; }
+    else if(P.mode==='bank'){ P.score+=10; P.count++; }
+    else { removeFromWrong(c); P.score+=5; P.fixed++; }
+    // 응원 팝업 (적당한 때)
+    const comeback=(c.retry||c.fromWrong);
+    if(comeback){ idolPopup(pick(LINES.comeback)); lastPopupAt=P.corr; }
+    else if([3,5,8,10,15,20].indexOf(P.streak)>=0){ idolPopup(pick(LINES.streak).replace('{n}',P.streak)); lastPopupAt=P.corr; }
+    else if(P.corr-lastPopupAt>=5 && Math.random()<0.6){ idolPopup(pick(LINES.praise)); lastPopupAt=P.corr; }
+    saveDB();
+    later(advance,1000);
+  } else {
+    P.locked=true; P.awaitNext=true; P.streak=0;
+    fb.className='feedback no'; fb.textContent='앗! 정답은 '+c.a+' 예요. 왜 그런지 천천히 살펴보자 👀'; $('#ans').style.borderColor='#e8503a';
+    $('#hint').classList.add('show');
+    if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); }
+    else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
+    else { const e=DB.wrong.find(w=>w.key===c.key); if(e)e.miss++; P.queue.push(c); }
+    saveDB();
+    const help=(P.mode==='bank'||P.mode==='review')?`<button class="bigbtn ghost" onclick="openHelp()">🙋 왜 틀렸을까? 차근차근 보기</button>`:'';
+    const pc=$('#play-controls'); if(pc) pc.innerHTML=help+`<button class="bigbtn" onclick="advance()">다음 문제로 ▶</button>`;
+  }
+}
+function stopPlay(){ clearTimers(); if(PLAY.mode==='bank') finishBank(); else finishReview(); }
+document.addEventListener('keydown',e=>{
+  if(!PLAY)return;
+  if(PLAY.helping){
+    if(!document.getElementById('tans'))return;
+    if(e.key>='0'&&e.key<='9') tutorPress(e.key);
+    else if(e.key==='Backspace'){ e.preventDefault(); tutorPress('del'); }
+    else if(e.key==='Enter'){ e.preventDefault(); tutorPress('ok'); }
+    return;
+  }
+  if(!PLAY.cur)return;
+  if(PLAY.awaitNext){ if(e.key==='Enter'){ e.preventDefault(); advance(); } return; }
+  if(e.key>='0'&&e.key<='9') press(e.key);
+  else if(e.key==='Backspace'){ e.preventDefault(); press('del'); }
+  else if(e.key==='Enter'){ e.preventDefault(); press('ok'); }
+});
+
+/* 결과 + 보상 */
+function rewardCardHTML(newCards){
+  if(!newCards.length) return '';
+  return newCards.map(i=>{ const c=ROSTER[i];
+    return `<div class="reward-banner">🎴 새 카드 획득! <b>${c.name}</b><br>
+      <div style="width:110px;height:130px;margin:8px auto;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,${c.hair},${c.outfit})">${idolFace(c)}</div>
+      <span style="font-size:14px;font-weight:700;color:var(--soft)">"${c.line}"</span></div>`;
+  }).join('');
+}
+function finishMaster(){
+  const P=PLAY; P.cur=null; const ud=unitDB(P.unitId);
+  const reward=rewardForClear(ud.clears); ud.clears++;
+  addStickers(reward); logEvent(P.unitId,'clear',1);
+  const newCards=checkCardUnlocks(); saveDB();
+  const nextR=rewardForClear(ud.clears);
+  let stars,msg;
+  if(P.retry===0){ stars='⭐⭐⭐'; msg='한 번도 안 틀렸어요! 완벽해요!'; }
+  else if(P.retry<=3){ stars='⭐⭐'; msg='거의 다 맞혔어요. 정말 잘했어요!'; }
+  else { stars='⭐'; msg='끝까지 다 풀었어요. 포기 안 한 게 최고!'; }
+  confetti(true); idolPopup(pick(LINES.clear), true);
+  P.body.innerHTML=`
+    <div class="result card">
+      <div class="stars">${stars}</div>
+      <h2>${curUnit.name} 퀴즈 클리어!</h2>
+      <div class="msg">${msg}</div>
+      <div class="reward-banner">🎟️ 스티커 +${reward}!<br><span style="font-size:13px;font-weight:700;color:var(--soft)">${ud.clears>=CLEAR_REWARD.length?'다음 클리어도 +1 (이제 새 단원에 도전!)':'다음 클리어는 +'+nextR+' — 너무 같은 것만 반복하지 말고 새 단원도!'}</span></div>
+      ${rewardCardHTML(newCards)}
+      <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 다시 푼 문제 ${P.retry}개</span></div>
+      <button class="bigbtn" onclick="setStage('bank')">🏦 문제은행에서 더 풀기</button>
+      <button class="bigbtn ghost" onclick="setStage('review')">📊 복습·분석</button>
+      <button class="bigbtn ghost" onclick="home()">🏠 다른 단원</button>
+    </div>`;
+}
+function finishBank(){
+  const P=PLAY; P.cur=null; const correct=P.count-P.wrongCount;
+  const reward=Math.floor(correct/10); addStickers(reward);
+  unitDB(P.unitId).bank+=P.count; if(P.count>0) logEvent(P.unitId,'bank',P.count);
+  const newCards=checkCardUnlocks(); saveDB();
+  const acc=P.count?Math.round(correct/P.count*100):0; const worst=worstCat(P.unitId);
+  confetti(true);
+  P.body.innerHTML=`
+    <div class="result card">
+      <div class="stars">🏦</div>
+      <h2>문제은행 ${P.count}문제!</h2>
+      <div class="msg">맞힌 문제 ${correct}개 · 정답률 ${acc}%</div>
+      ${reward>0?`<div class="reward-banner">🎟️ 스티커 +${reward}</div>`:''}
+      ${rewardCardHTML(newCards)}
+      <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 틀린 문제 ${P.wrongCount}개</span></div>
+      ${worst?`<p style="margin-top:12px">📘 가장 많이 틀린 유형: <b style="color:var(--c-dark)">${worst}</b></p>`:''}
+      <button class="bigbtn" onclick="setStage('bank')">🏦 계속 풀기</button>
+      <button class="bigbtn ghost" onclick="setStage('review')">📊 복습·분석</button>
+    </div>`;
+}
+function finishReview(){
+  const P=PLAY; P.cur=null; const reward=Math.floor(P.fixed/2); addStickers(reward);
+  unitDB(P.unitId).review+=P.fixed; if(P.fixed>0) logEvent(P.unitId,'review',P.fixed);
+  const newCards=checkCardUnlocks(); saveDB();
+  confetti(true);
+  P.body.innerHTML=`
+    <div class="result card">
+      <div class="stars">📘✨</div>
+      <h2>복습 완료!</h2>
+      <div class="msg">${P.fixed}문제를 다시 맞혔어요.<br>틀렸던 게 실력이 되는 순간이에요!</div>
+      ${reward>0?`<div class="reward-banner">🎟️ 스티커 +${reward}</div>`:''}
+      ${rewardCardHTML(newCards)}
+      <button class="bigbtn" onclick="setStage('review')">📊 분석 다시 보기</button>
+      <button class="bigbtn ghost" onclick="setStage('bank')">🏦 문제은행 더 풀기</button>
+    </div>`;
+}
+
+/* STEP5 복습·분석 */
+function renderReview(body,unitId){
+  const st=unitDB(unitId).cats;
+  const cats=Object.keys(st).filter(k=>st[k].seen>0);
+  const pool=DB.wrong.filter(w=>w.unitId===unitId);
+  let bars;
+  if(cats.length===0) bars=`<p style="text-align:center;color:var(--soft)">아직 푼 문제가 없어요.<br>STEP3 퀴즈나 STEP4 문제은행을 먼저 풀어봐요!</p>`;
+  else {
+    cats.sort((a,b)=>st[b].wrong-st[a].wrong || st[b].seen-st[a].seen);
+    bars=cats.map(c=>{ const s=st[c], acc=Math.round((s.seen-s.wrong)/s.seen*100);
+      const col=acc>=80?'#19a974':acc>=50?'#f39c12':'#e8503a';
+      return `<div class="cat-row"><div class="lab"><span>${c}</span><span style="color:${col}">${acc}%</span></div>
+        <div class="progress" style="height:12px;margin:4px 0 2px"><div class="bar" style="width:${acc}%;background:${col}"></div></div>
+        <div class="sub">${s.seen}번 풀어서 ${s.wrong}번 틀림</div></div>`; }).join('');
+  }
+  const worst=worstCat(unitId);
+  body.innerHTML=`
+    <div class="card"><h3>📊 어떤 유형을 많이 틀릴까?</h3>
+      ${worst?`<div class="tipbox" style="margin-bottom:12px">📘 지금 가장 약한 유형: <b>${worst}</b><br>여기를 집중 연습하면 실력이 쑥!</div>`:''}
+      ${bars}</div>
+    <div class="card" style="text-align:center"><h3 style="justify-content:center">📘 틀린 문제 다시 풀기</h3>
+      <p style="margin:6px 0 12px">복습할 문제 <b style="color:var(--c-dark)">${pool.length}개</b></p>
+      ${pool.length>0?`<button class="bigbtn" onclick="startReview('${unitId}')">🔁 복습 시작</button>`
+        :`<p style="color:var(--soft)">틀린 문제가 없어요! 정말 잘하고 있어요 🎉</p>`}</div>`;
+}
+
+/* ===================== 부모용 대시보드 ===================== */
+function fmtTime(s){ const m=Math.floor(s/60), h=Math.floor(m/60); return h>0?`${h}시간 ${m%60}분`:`${m}분`; }
+function fmtAgo(t){ const d=Date.now()-t, mi=Math.floor(d/60000); if(mi<1)return '방금'; if(mi<60)return mi+'분 전'; const h=Math.floor(mi/60); if(h<24)return h+'시간 전'; return Math.floor(h/24)+'일 전'; }
+const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습'};
+function renderDashboard(){
+  stopStudyClock(); setTheme(null);
+  const acc=DB.totalSolved?Math.round(DB.totalCorrect/DB.totalSolved*100):0;
+  let unitRows=UNITS.map(u=>{ const d=unitDB(u.id); const a=d.solved?Math.round(d.correct/d.solved*100):0;
+    return `<div class="cat-row"><div class="lab"><span>${u.emoji} ${u.name}</span><span>${d.solved}문제 · ${a}%</span></div>
+      <div class="progress" style="height:11px;margin:4px 0 2px"><div class="bar" style="width:${a}%"></div></div>
+      <div class="sub">클리어 🏆 ${d.clears}회 · 문제은행 ${d.bank} · 복습 ${d.review}</div></div>`; }).join('');
+  // 전체 약점 유형 top3
+  const all=[]; UNITS.forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) all.push({u:u.name,c,w:cats[c].wrong}); } });
+  all.sort((a,b)=>b.w-a.w);
+  const weak=all.slice(0,3).map(x=>`<span class="wpill" style="margin:3px">${x.u}·${x.c} ✗${x.w}</span>`).join('')||'<span style="color:var(--soft)">아직 없음 🎉</span>';
+  const logs=DB.log.slice(0,8).map(l=>{ const u=UNITS.find(x=>x.id===l.u); return `<div class="logrow"><span>${u?u.emoji:''} ${u?u.name:''} · ${KIND[l.k]||l.k} ${l.n}</span><span class="d">${fmtAgo(l.t)}</span></div>`; }).join('')||'<p style="color:var(--soft)">아직 기록이 없어요.</p>';
+  app.innerHTML=`
+    <div class="topbar"><button class="back" onclick="home()">←</button><div class="t">📊 공부 기록</div></div>
+    <div class="card">
+      <div class="dash-grid">
+        <div class="dash-stat"><div class="v">${DB.totalSolved}</div><div class="k">총 푼 문제</div></div>
+        <div class="dash-stat"><div class="v">${acc}%</div><div class="k">전체 정답률</div></div>
+        <div class="dash-stat"><div class="v">${fmtTime(DB.studySeconds)}</div><div class="k">공부 시간</div></div>
+        <div class="dash-stat"><div class="v">🎟️ ${DB.stickers}</div><div class="k">모은 스티커</div></div>
+        <div class="dash-stat"><div class="v">🎴 ${DB.cards.length}/${ROSTER.length}</div><div class="k">카드 수집</div></div>
+        <div class="dash-stat"><div class="v">🏆 ${UNITS.reduce((s,u)=>s+unitDB(u.id).clears,0)}</div><div class="k">단원 클리어</div></div>
+      </div>
+    </div>
+    <div class="card"><h3>📚 단원별 공부량</h3>${unitRows}</div>
+    <div class="card"><h3>🔎 더 연습이 필요한 유형</h3><div style="display:flex;flex-wrap:wrap">${weak}</div></div>
+    <div class="card"><h3>🕒 최근 활동</h3>${logs}</div>
+    <div class="card" style="text-align:center">
+      <button class="bigbtn ghost" onclick="renderGallery()">🎴 카드 모음 보기</button>
+      <button class="bigbtn ghost" style="border-color:#e8503a;color:#e8503a" onclick="resetAll()">🗑️ 기록 초기화</button>
+    </div>`;
+}
+function resetAll(){
+  if(!confirm('정말 모든 기록(스티커·카드·공부 기록)을 지울까요? 되돌릴 수 없어요.')) return;
+  try{ localStorage.removeItem(SKEY); }catch(e){}
+  DB=freshDB(); saveDB(); home();
+}
+function renderGallery(){
+  stopStudyClock(); setTheme(null);
+  const next=ROSTER.find((c,i)=>DB.cards.indexOf(i)<0);
+  const cards=ROSTER.map((c,i)=>{ const owned=DB.cards.indexOf(i)>=0;
+    return `<div class="idol-card ${owned?'':'locked'}" style="--g1:${c.outfit};--g2:${c.hair}">
+      <div class="idol-art">${owned?idolFace(c):'<div class="lock">🔒</div>'}</div>
+      <div class="idol-name">${owned?c.name:'? ? ?'}</div>
+      <div class="idol-cost">🎟️ ${c.cost}</div></div>`; }).join('');
+  app.innerHTML=`
+    <div class="topbar"><button class="back" onclick="home()">←</button><div class="t">🎴 ${GROUP}</div></div>
+    <div class="card" style="text-align:center">
+      <p style="margin:0 0 4px;font-weight:800">카드 ${DB.cards.length} / ${ROSTER.length} 수집</p>
+      <p style="margin:0;color:var(--soft);font-size:14px">${next?`다음 카드 <b>${next.name}</b>까지 스티커 ${Math.max(0,next.cost-DB.stickersEver)}개!`:'모든 카드를 모았어요! 대단해요 🏆'}</p>
+    </div>
+    <div class="card"><div class="gallery">${cards}</div></div>
+    <div class="credit">공부하고 스티커를 모으면 카드가 한 명씩 열려요. 새 단원을 깨면 더 빨리 모여요!</div>`;
+}
+
+/* ===================== 🙋 도와주세요 (인강 튜터) =====================
+   현재 문제를 단계별로 쪼개 설명하고, 중간에 미니 문제로 이해를 확인.
+   틀려도 막지 않고 다시 알려준 뒤 다음 단계로. */
+const TUTOR={
+  mul(t){const{a,b}=t; const sum=Array(b).fill(a).join(' + ');
+    return [
+      {type:'say',text:`<b>${a} × ${b}</b> 는 '${a}을 ${b}번 더하기'야. 같이 해보자! 🐸`,more:`곱하기는 같은 수를 여러 번 더하는 빠른 방법이야.`},
+      {type:'ask',text:`먼저 쉬운 것부터! ${a} + ${a} 는?`,a:a*2,reteach:`${a}+${a}=${a*2} 이야.`},
+      {type:'say',text:`좋아! 이렇게 ${a}씩 더해 나가는 거야.<br>${sum} = <b>${a*b}</b>`},
+      {type:'done',text:`그래서 <b>${a} × ${b} = ${a*b}</b>! 이제 직접 입력해볼까? ✏️`,a:a*b},
+    ];},
+  mulTens(t){const{a,b}=t; const d=a/10;
+    return [
+      {type:'say',text:`<b>${a} × ${b}</b> 커 보여도 쉬워! ${a}는 ${d}의 10배거든.`},
+      {type:'ask',text:`작은 곱셈 먼저! ${d} × ${b} 는?`,a:d*b,reteach:`${d}×${b}=${d*b} 이야.`},
+      {type:'say',text:`거기에 0을 하나 붙이면 끝! ${d*b} → <b>${d*b}0</b>`},
+      {type:'done',text:`<b>${a} × ${b} = ${a*b}</b>! 직접 입력해보자 ✏️`,a:a*b},
+    ];},
+  mul2(t){const{a,b}=t; const t0=Math.floor(a/10)*10,o=a%10;
+    return [
+      {type:'say',text:`두 자리 곱셈의 비법은 <b>쪼개기</b>! ${a} = ${t0} + ${o} 로 나눠.`},
+      {type:'ask',text:`먼저 ${t0} × ${b} 는?`,a:t0*b,reteach:`${t0}×${b}=${t0*b}.`},
+      {type:'ask',text:`그다음 ${o} × ${b} 는?`,a:o*b,reteach:`${o}×${b}=${o*b}.`},
+      {type:'say',text:`이제 둘을 더하면 끝! ${t0*b} + ${o*b} = <b>${a*b}</b>`},
+      {type:'done',text:`<b>${a} × ${b} = ${a*b}</b>! ✏️`,a:a*b},
+    ];},
+  divMul(t){const{a,b,c}=t;
+    return [
+      {type:'say',text:`나눗셈은 곱셈을 거꾸로! <b>${a} ÷ ${b}</b> 는 '${b} 곱하기 몇이 ${a}?'를 찾는 거야. 🔁`,more:`${b}단을 떠올려봐: ${b}, ${b*2}, ${b*3}... ${a}가 나올 때까지!`},
+      {type:'ask',text:`${b} × 몇 = ${a} 일까? 그 '몇'을 입력!`,a:c,reteach:`${b}×${c}=${a} 니까 답은 ${c}.`},
+      {type:'done',text:`맞아! <b>${a} ÷ ${b} = ${c}</b> ✏️`,a:c},
+    ];},
+  divShare(t){const{a,b,c}=t;
+    return [
+      {type:'say',text:`사탕 ${a}개를 ${b}명이 똑같이 나눠 가져. 한 명은 몇 개? 🍬`},
+      {type:'say',text:`한 개씩 돌아가며 주는 걸 빠르게 = 나눗셈! ${b}×몇=${a} 를 생각해.`},
+      {type:'ask',text:`${b} × 몇 = ${a}?`,a:c,reteach:`${b}×${c}=${a}.`},
+      {type:'done',text:`한 명당 <b>${c}개</b>! (${a}÷${b}=${c}) ✏️`,a:c},
+    ];},
+  divGroup(t){const{a,per,grp}=t;
+    return [
+      {type:'say',text:`${a}개를 ${per}개씩 봉지에 담아. 봉지가 몇 개 나올까? 📦`},
+      {type:'ask',text:`${per} × 몇 = ${a}?`,a:grp,reteach:`${per}×${grp}=${a}.`},
+      {type:'done',text:`봉지 <b>${grp}개</b>! (${a}÷${per}=${grp}) ✏️`,a:grp},
+    ];},
+  fracNum(t){const{n,m}=t;
+    return [
+      {type:'say',text:`분수에서 <b>분자</b>(위 숫자)는 '색칠한 칸 수'야.`,visual:fracBar(n,m)},
+      {type:'ask',text:`색칠된 칸은 몇 칸일까? 세어봐!`,a:m,reteach:`색칠된 칸은 ${m}개야.`},
+      {type:'done',text:`맞아, 분자는 <b>${m}</b>! ✏️`,a:m},
+    ];},
+  fracDen(t){const{n,m}=t;
+    return [
+      {type:'say',text:`<b>분모</b>(아래 숫자)는 '전체를 똑같이 나눈 칸 수'야.`,visual:fracBar(n,m)},
+      {type:'ask',text:`칸이 모두 몇 개야?`,a:n,reteach:`전체 칸은 ${n}개.`},
+      {type:'done',text:`분모는 <b>${n}</b>! ✏️`,a:n},
+    ];},
+  fracCmp(t){const{x,y}=t; const mn=Math.min(x,y);
+    return [
+      {type:'say',text:`피자를 많이 자를수록 한 조각은 작아져. 그래서 <b>분모가 작을수록 더 큰 분수</b>야! 🍕`},
+      {type:'ask',text:`${x} 와 ${y} 중 더 작은 수는?`,a:mn,reteach:`${mn}이 더 작아.`},
+      {type:'done',text:`그러니 더 큰 분수는 1/${mn}, 분모는 <b>${mn}</b>! ✏️`,a:mn},
+    ];},
+  fracLeft(t){const{n,m}=t;
+    return [
+      {type:'say',text:`전체 ${n}조각에서 ${m}조각을 먹었어. 남은 건 <b>빼기</b>로!`},
+      {type:'ask',text:`${n} - ${m} 는?`,a:n-m,reteach:`${n}-${m}=${n-m}.`},
+      {type:'done',text:`남은 조각은 <b>${n-m}</b>! ✏️`,a:n-m},
+    ];},
+  conv(t){const{v,f,op,bu,su}=t;
+    if(op==='mul') return [
+      {type:'say',text:`${bu}를 ${su}로 바꿀 땐 <b>×${f}</b> 야. (1${bu}=${f}${su})`,more:`단위가 더 잘게 쪼개지니까 숫자는 커져. 그래서 곱하기!`},
+      {type:'ask',text:`${v} × ${f} 는?`,a:v*f,reteach:`${v}×${f}=${v*f}.`},
+      {type:'done',text:`<b>${v}${bu} = ${v*f}${su}</b>! ✏️`,a:v*f},
+    ];
+    return [
+      {type:'say',text:`${su} 단위가 더 크니까 묶어줘야 해. ${bu}→${su} 는 <b>÷${f}</b>! (${f}${bu}=1${su})`,more:`${f}개씩 묶으면 1${su}. 그래서 나누기!`},
+      {type:'ask',text:`${v} ÷ ${f} 는?`,a:v/f,reteach:`${v}÷${f}=${v/f}.`},
+      {type:'done',text:`<b>${v}${bu} = ${v/f}${su}</b>! ✏️`,a:v/f},
+    ];},
+  compound(t){const{big,small,f,bu,su}=t;
+    return [
+      {type:'say',text:`단위가 섞였네! 먼저 큰 단위(${bu})를 작은 단위(${su})로 바꾸자. 🧮`},
+      {type:'ask',text:`${big}${bu} 를 ${su}로: ${big} × ${f} = ?`,a:big*f,reteach:`${big}×${f}=${big*f}.`},
+      {type:'say',text:`이제 남은 ${small}${su}를 더하면 끝!`},
+      {type:'ask',text:`${big*f} + ${small} = ?`,a:big*f+small,reteach:`${big*f}+${small}=${big*f+small}.`},
+      {type:'done',text:`<b>= ${big*f+small}${su}</b>! ✏️`,a:big*f+small},
+    ];},
+  unitOp(t){const{big,small,f,bu,su,sign}=t; const res=big*f+sign*small;
+    return [
+      {type:'say',text:`더하거나 빼기 전에 <b>단위를 똑같이</b> 맞춰야 해!`,more:`${bu}랑 ${su}는 단위가 달라서 그냥 못 더해. 먼저 ${su}로 통일!`},
+      {type:'ask',text:`${big}${bu} 를 ${su}로: ${big} × ${f} = ?`,a:big*f,reteach:`${big}×${f}=${big*f}.`},
+      {type:'say',text:`이제 ${sign>0?'더하자':'빼자'}: ${big*f} ${sign>0?'+':'-'} ${small}`},
+      {type:'ask',text:`${big*f} ${sign>0?'+':'-'} ${small} = ?`,a:res,reteach:`답은 ${res}.`},
+      {type:'done',text:`<b>= ${res}${su}</b>! ✏️`,a:res},
+    ];},
+};
+function tutorBeats(q){
+  if(q.t && TUTOR[q.t.k]) return TUTOR[q.t.k](q.t,q);
+  return [{type:'say',text:`천천히 힌트를 같이 보자. 💡 ${q.hint}`},{type:'done',text:`정답은 <b>${q.a}</b>! 이제 직접 입력해보자 ✏️`,a:q.a}];
+}
+function openHelp(){
+  const P=PLAY; if(!P||!P.cur||(P.locked&&!P.awaitNext)) return;
+  clearTimers(); P.helping=true; P.buf='';
+  window._TT={beats:tutorBeats(P.cur), i:0, buf:'', locked:false, adv:!!P.awaitNext};
+  renderBeat();
+}
+function renderBeat(){
+  const T=window._TT, b=T.beats[T.i], total=T.beats.length; let inner='';
+  if(b.type==='say'){
+    inner=`<div class="q-text" style="font-size:19px;line-height:1.5">${b.text}</div>
+      ${b.visual?`<div class="q-visual">${b.visual}</div>`:''}
+      ${b._more&&b.more?`<div class="tipbox" style="text-align:left">${b.more}</div>`:''}
+      <div style="margin-top:16px;display:flex;gap:8px;flex-direction:column">
+        <button class="bigbtn" onclick="tutorNext()">응, 알겠어! ▶</button>
+        ${b.more&&!b._more?`<button class="bigbtn ghost" onclick="tutorMore()">음.. 잘 모르겠어 🤔</button>`:''}
+      </div>`;
+  } else if(b.type==='ask'){
+    inner=`<div class="q-text" style="font-size:20px">${b.text}</div>
+      <div class="ans-box empty" id="tans">?</div>
+      <div class="feedback" id="tfb"></div>
+      <div class="keypad">
+        ${[1,2,3,4,5,6,7,8,9].map(d=>`<button class="key" onclick="tutorPress('${d}')">${d}</button>`).join('')}
+        <button class="key del" onclick="tutorPress('del')">⌫</button>
+        <button class="key" onclick="tutorPress('0')">0</button>
+        <button class="key ok" onclick="tutorPress('ok')">확인</button>
+      </div>`;
+  } else {
+    inner=`<div class="q-text" style="font-size:20px;line-height:1.5">${b.text}</div>
+      <button class="bigbtn" onclick="closeHelp()" style="margin-top:16px">✏️ 이제 직접 풀래!</button>`;
+  }
+  PLAY.body.innerHTML=`
+    <div class="quiz-top"><span class="score-pill">🙋 선생님이 도와줄게</span><span class="score-pill">${T.i+1}/${total}</span><button class="stopbtn" onclick="closeHelp()">닫기</button></div>
+    <div class="q-card">${inner}</div>`;
+}
+function tutorMore(){ const T=window._TT; T.beats[T.i]._more=true; renderBeat(); }
+function tutorNext(){ const T=window._TT; T.i++; T.buf=''; T.locked=false; if(T.i>=T.beats.length){ closeHelp(); return; } renderBeat(); }
+function tutorPress(k){
+  const T=window._TT; if(!T||T.locked)return; const ans=$('#tans');
+  if(k==='del') T.buf=T.buf.slice(0,-1);
+  else if(k==='ok') return tutorCheck();
+  else if(T.buf.length<6) T.buf+=k;
+  if(ans){ ans.textContent=T.buf===''?'?':T.buf; ans.classList.toggle('empty',T.buf===''); }
+}
+function tutorCheck(){
+  const T=window._TT, b=T.beats[T.i]; if(T.buf===''||T.locked)return;
+  const fb=$('#tfb'), val=parseInt(T.buf,10);
+  T.locked=true;
+  if(val===b.a){ fb.className='feedback ok'; fb.textContent='딩동댕! 맞았어 👏'; confetti(false); later(tutorNext,950); }
+  else { fb.className='feedback no'; fb.textContent='괜찮아! '+(b.reteach||('정답은 '+b.a)); later(tutorNext,2400); }
+}
+function closeHelp(){ const P=PLAY; if(!P)return; clearTimers(); P.helping=false; P.buf='';
+  const adv=window._TT&&window._TT.adv;
+  if(adv){ advance(); } else { P.locked=false; renderCard(); }
+}
+
+/* ===================== 꽃가루 ===================== */
+function confetti(big){
+  const box=document.getElementById('confetti');
+  const n=big?130:30; const colors=['#ff6b6b','#feca57','#48dbfb','#1dd1a1','#ff9ff3','#54a0ff','#ff9f43'];
+  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='conf';
+    c.style.left=Math.random()*100+'vw'; c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.6+Math.random()*1.4)+'s'; c.style.animationDelay=(Math.random()*.3)+'s';
+    c.style.width=(7+Math.random()*7)+'px'; c.style.height=(10+Math.random()*8)+'px';
+    box.appendChild(c); setTimeout(()=>c.remove(),3200); }
+}
+
+/* =========================================================
+   단원별 콘텐츠
+   ========================================================= */
+const MODULES={};
+
+/* ---------- 곱셈 ---------- */
+MODULES.mul={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 반복덧셈(묶음)</span>
+      <h3>🐸 같은 수를 여러 번 더하기</h3>
+      <p>한 묶음에 <span class="hl">4마리씩</span> 3묶음 → 4+4+4 = <b>12</b></p>
+      <div class="formula">4 × 3 = 12 <span style="font-size:13px;color:var(--soft)">(4씩 3묶음)</span></div></div>
+    <div class="card"><span class="method-tag">방법 2 · 뛰어세기(수직선)</span>
+      <h3>🦘 같은 칸씩 콩콩 뛰기</h3>
+      <p>0에서 4씩 뛰면: 4 → 8 → 12. <b>3번 뛰면 12</b>예요. 곱셈은 "같은 만큼 뛰어세기"!</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 배열(가로 × 세로)</span>
+      <h3>🔵 줄 맞춰 놓고 세기</h3>
+      <p>가로 4개, 세로 3줄로 놓으면 점이 <b>4×3 = 12</b>개. 가로·세로를 바꿔도 답은 같아요 (3×4=4×3)!</p></div>
+    <div class="card"><span class="method-tag">방법 4 · 두 배·세 배</span>
+      <h3>📈 몇 배로 커지기</h3>
+      <p>4의 2배=8, 3배=12. "배"는 곱셈이에요.</p>
+      <div class="tipbox"><b>꿀팁</b> 큰 곱셈은 쪼개요. 13×3 = (10×3)+(3×3) = 30+9 = <b>39</b></div></div>`;
+  },
+  games:[
+    {name:'🐸 묶음', build:buildMulGroups},
+    {name:'🦘 뛰어세기', build:buildMulJump},
+    {name:'🔵 배열', build:buildMulArray},
+  ],
+  gens:[
+    {cat:'곱셈구구', make(){const a=rnd(2,9),b=rnd(2,9);return{q:`${a} <span class="b">×</span> ${b} = ?`,a:a*b,hint:`${a}을 ${b}번 더해요. ${a}씩 ${b}묶음!`,t:{k:'mul',a,b}};}},
+    {cat:'몇십×몇', make(){const a=rnd(2,9)*10,b=rnd(2,9);return{q:`${a} <span class="b">×</span> ${b} = ?`,a:a*b,hint:`${a/10}×${b}=${a/10*b}, 뒤에 0을 붙여 ${a*b}`,t:{k:'mulTens',a,b}};}},
+    {cat:'두자리×한자리', make(){const a=rnd(11,29),b=rnd(2,5),t=Math.floor(a/10)*10,o=a%10;return{q:`${a} <span class="b">×</span> ${b} = ?`,a:a*b,hint:`쪼개요! (${t}×${b})+(${o}×${b}) = ${t*b}+${o*b}`,t:{k:'mul2',a,b}};}},
+    {cat:'몇 배', make(){const a=rnd(2,9),b=rnd(2,9);return{q:`${a}의 <span class="b">${b}배</span>는?`,a:a*b,hint:`${a}을 ${b}번 더해요 = ${a}×${b}`,t:{k:'mul',a,b}};}},
+  ]
+};
+function buildMulGroups(host){
+  let per=4,grp=3; window._mg={per,grp};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">🐸 한 묶음에 <b id="mg-p">${per}</b>마리씩, <b id="mg-g">${grp}</b>묶음!</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">묶음당</span><button class="stepbtn" onclick="mgStep('per',-1)">－</button><span class="val" id="mg-pv">${per}</span><button class="stepbtn" onclick="mgStep('per',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">묶음 수</span><button class="stepbtn" onclick="mgStep('grp',-1)">－</button><span class="val" id="mg-gv">${grp}</span><button class="stepbtn" onclick="mgStep('grp',1)">＋</button></div>
+    </div>
+    <div class="m-board" id="mg-board"></div>
+    <div class="cg-eq" id="mg-eq"></div></div>`;
+  drawMg();
+}
+function mgStep(w,d){ const s=window._mg; if(w==='per')s.per=Math.max(1,Math.min(9,s.per+d)); else s.grp=Math.max(1,Math.min(8,s.grp+d));
+  $('#mg-pv').textContent=s.per; $('#mg-gv').textContent=s.grp; $('#mg-p').textContent=s.per; $('#mg-g').textContent=s.grp; drawMg(); }
+function drawMg(){ const {per,grp}=window._mg; let html='';
+  for(let g=0;g<grp;g++){ let f=''; for(let i=0;i<per;i++) f+=`<span class="crit" style="animation-delay:${(g*per+i)*0.04}s">🐸</span>`; html+=`<div class="m-group">${f}</div>`; }
+  $('#mg-board').innerHTML=html;
+  $('#mg-eq').innerHTML=`${Array(grp).fill(per).join(' + ')} = <span class="big">${per*grp}</span><br><span style="font-size:16px">${per} × ${grp} = <b style="color:var(--c-dark)">${per*grp}</b> (${grp}배!)</span>`; }
+
+function buildMulJump(host){
+  let per=3,grp=4; window._mj={per,grp};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">🦘 0에서 <b id="mj-p">${per}</b>칸씩 <b id="mj-g">${grp}</b>번 뛰어요!</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">한 번에</span><button class="stepbtn" onclick="mjStep('per',-1)">－</button><span class="val" id="mj-pv">${per}</span><button class="stepbtn" onclick="mjStep('per',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">뛴 횟수</span><button class="stepbtn" onclick="mjStep('grp',-1)">－</button><span class="val" id="mj-gv">${grp}</span><button class="stepbtn" onclick="mjStep('grp',1)">＋</button></div>
+    </div>
+    <div class="nl-wrap"><div id="mj-nl"></div></div>
+    <div class="cg-eq" id="mj-eq"></div></div>`;
+  drawMj();
+}
+function mjStep(w,d){ const s=window._mj; if(w==='per')s.per=Math.max(1,Math.min(6,s.per+d)); else s.grp=Math.max(1,Math.min(6,s.grp+d));
+  $('#mj-pv').textContent=s.per; $('#mj-gv').textContent=s.grp; $('#mj-p').textContent=s.per; $('#mj-g').textContent=s.grp; drawMj(); }
+function drawMj(){ const {per,grp}=window._mj; const max=per*grp; const W=Math.max(320,max*30+40), H=120, x=i=>20+i*((W-40)/max);
+  let ticks='',arcs='',labels='';
+  for(let i=0;i<=max;i++){ const on=i%per===0; ticks+=`<line x1="${x(i)}" y1="80" x2="${x(i)}" y2="${on?64:72}" stroke="${on?'#a07a18':'#caa64a'}" stroke-width="${on?3:1.5}"/>`;
+    if(on) labels+=`<text x="${x(i)}" y="98" font-size="11" font-weight="800" fill="#8a6a14" text-anchor="middle">${i}</text>`; }
+  for(let j=0;j<grp;j++){ const x0=x(j*per), x1=x((j+1)*per), mx=(x0+x1)/2;
+    arcs+=`<path d="M${x0},80 Q${mx},${28} ${x1},80" fill="none" stroke="var(--c)" stroke-width="3"/><text x="${mx}" y="24" font-size="12" text-anchor="middle">🦘</text>`; }
+  $('#mj-nl').innerHTML=`<svg width="${W}" height="${H}"><line x1="20" y1="80" x2="${W-20}" y2="80" stroke="#a07a18" stroke-width="2"/>${ticks}${arcs}${labels}</svg>`;
+  $('#mj-eq').innerHTML=`${per}씩 ${grp}번 뛰면 <span class="big">${max}</span><br><span style="font-size:16px">${per} × ${grp} = <b style="color:var(--c-dark)">${max}</b></span>`; }
+
+function buildMulArray(host){
+  let per=4,grp=3; window._ma={per,grp};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">🔵 가로 <b id="ma-p">${per}</b> × 세로 <b id="ma-g">${grp}</b></p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">가로</span><button class="stepbtn" onclick="maStep('per',-1)">－</button><span class="val" id="ma-pv">${per}</span><button class="stepbtn" onclick="maStep('per',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">세로</span><button class="stepbtn" onclick="maStep('grp',-1)">－</button><span class="val" id="ma-gv">${grp}</span><button class="stepbtn" onclick="maStep('grp',1)">＋</button></div>
+    </div>
+    <div id="ma-grid"></div>
+    <div class="cg-eq" id="ma-eq"></div></div>`;
+  drawMa();
+}
+function maStep(w,d){ const s=window._ma; if(w==='per')s.per=Math.max(1,Math.min(9,s.per+d)); else s.grp=Math.max(1,Math.min(9,s.grp+d));
+  $('#ma-pv').textContent=s.per; $('#ma-gv').textContent=s.grp; $('#ma-p').textContent=s.per; $('#ma-g').textContent=s.grp; drawMa(); }
+function drawMa(){ const {per,grp}=window._ma; let dots='';
+  for(let i=0;i<per*grp;i++) dots+=`<div class="dot" style="animation-delay:${i*0.03}s"></div>`;
+  const g=$('#ma-grid'); g.className='arr-grid'; g.style.gridTemplateColumns=`repeat(${per}, 26px)`; g.innerHTML=dots;
+  $('#ma-eq').innerHTML=`<span style="font-size:16px">가로 ${per} × 세로 ${grp} =</span> <span class="big">${per*grp}</span>`; }
+
+/* ---------- 나눗셈 ---------- */
+MODULES.div={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 똑같이 나누기(등분제)</span>
+      <h3>🍪 똑같이 나눠 갖기</h3>
+      <p>쿠키 12개를 친구 3명에게 똑같이 → 한 명당 <b>4개</b></p>
+      <div class="formula">12 ÷ 3 = 4</div></div>
+    <div class="card"><span class="method-tag">방법 2 · 덜어내기(포함제)</span>
+      <h3>📦 몇 개씩 묶어 덜어내기</h3>
+      <p>12개를 4개씩 봉지에 담으면 봉지가 <b>3개</b>. "몇 묶음이 나올까?"도 나눗셈이에요.</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 곱셈의 거꾸로</span>
+      <h3>🔁 곱셈으로 거꾸로 생각</h3>
+      <p>3 × 4 = 12 ↔ 12 ÷ 3 = 4</p>
+      <div class="tipbox"><b>꿀팁</b> 12÷3=? → "3 곱하기 몇이 12?" → 3×<b>4</b>=12 → 답 <b>4</b>!</div></div>`;
+  },
+  games:[
+    {name:'🍪 나눠주기', build:buildDivShare},
+    {name:'📦 덜어담기', build:buildDivGroup},
+  ],
+  gens:[
+    {cat:'곱셈구구 나눗셈', make(){const b=rnd(2,9),c=rnd(2,9),a=b*c;return{q:`${a} <span class="b">÷</span> ${b} = ?`,a:c,hint:`${b}×몇=${a}? → ${b}×${c}=${a}`,t:{k:'divMul',a,b,c}};}},
+    {cat:'똑같이 나누기', make(){const b=rnd(2,9),c=rnd(2,9),a=b*c;return{q:`사탕 ${a}개를 ${b}명이 똑같이 나누면 한 명당 ? 개`,a:c,hint:`${a}÷${b}. ${b}×몇=${a}?`,t:{k:'divShare',a,b,c}};}},
+    {cat:'거꾸로 곱셈', make(){const b=rnd(2,9),c=rnd(2,9),a=b*c;return{q:`${b} <span class="b">×</span> ? = ${a}`,a:c,hint:`${a}÷${b} 와 같아요!`,t:{k:'divMul',a,b,c}};}},
+    {cat:'몇 묶음', make(){const per=rnd(2,6),grp=rnd(2,6),a=per*grp;return{q:`${a}개를 ${per}개씩 묶으면 ? 묶음`,a:grp,hint:`${a}÷${per}. ${per}×몇=${a}?`,t:{k:'divGroup',a,per,grp}};}},
+  ]
+};
+function buildDivShare(host){
+  let plate=3,per=4; window._ds={plate,per};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">🍪 쿠키 <b id="ds-t">${plate*per}</b>개를 접시 <b id="ds-p2">${plate}</b>개에 똑같이!</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">접시 수</span><button class="stepbtn" onclick="dsStep('plate',-1)">－</button><span class="val" id="ds-pv">${plate}</span><button class="stepbtn" onclick="dsStep('plate',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">한 접시</span><button class="stepbtn" onclick="dsStep('per',-1)">－</button><span class="val" id="ds-ev">${per}</span><button class="stepbtn" onclick="dsStep('per',1)">＋</button></div>
+    </div>
+    <div class="plates" id="ds-plates"></div>
+    <div class="cg-eq" id="ds-eq"></div></div>`;
+  drawDs();
+}
+function dsStep(w,d){ const s=window._ds; if(w==='plate')s.plate=Math.max(2,Math.min(6,s.plate+d)); else s.per=Math.max(1,Math.min(8,s.per+d));
+  $('#ds-pv').textContent=s.plate; $('#ds-ev').textContent=s.per; $('#ds-t').textContent=s.plate*s.per; $('#ds-p2').textContent=s.plate; drawDs(); }
+function drawDs(){ const {plate,per}=window._ds; const total=plate*per; let html='',k=0;
+  for(let p=0;p<plate;p++){ let c=''; for(let i=0;i<per;i++) c+=`<span class="crit" style="animation-delay:${(k++)*0.05}s">🍪</span>`; html+=`<div><div class="plate">${c}</div><div class="plate-cap">${per}개</div></div>`; }
+  $('#ds-plates').innerHTML=html;
+  $('#ds-eq').innerHTML=`${total} ÷ ${plate} = <span class="big">${per}</span><br><span style="font-size:15px">한 접시에 <b style="color:var(--c-dark)">${per}개</b>씩</span>`; }
+
+function buildDivGroup(host){
+  let per=4,grp=3; window._dg={per,grp};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">📦 <b id="dg-t">${per*grp}</b>개를 <b id="dg-p2">${per}</b>개씩 봉지에 담으면?</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">전체</span><button class="stepbtn" onclick="dgStep('grp',-1)">－</button><span class="val" id="dg-tv">${per*grp}</span><button class="stepbtn" onclick="dgStep('grp',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">몇 개씩</span><button class="stepbtn" onclick="dgStep('per',-1)">－</button><span class="val" id="dg-ev">${per}</span><button class="stepbtn" onclick="dgStep('per',1)">＋</button></div>
+    </div>
+    <div class="plates" id="dg-boxes"></div>
+    <div class="cg-eq" id="dg-eq"></div></div>`;
+  drawDg();
+}
+function dgStep(w,d){ const s=window._dg; if(w==='per'){ s.per=Math.max(2,Math.min(6,s.per+d)); } else { s.grp=Math.max(2,Math.min(6,s.grp+d)); }
+  $('#dg-ev').textContent=s.per; $('#dg-tv').textContent=s.per*s.grp; $('#dg-t').textContent=s.per*s.grp; $('#dg-p2').textContent=s.per; drawDg(); }
+function drawDg(){ const {per,grp}=window._dg; const total=per*grp; let html='',k=0;
+  for(let b=0;b<grp;b++){ let c=''; for(let i=0;i<per;i++) c+=`<span class="crit" style="animation-delay:${(k++)*0.05}s">🍬</span>`; html+=`<div><div class="box">${c}</div><div class="plate-cap">봉지 ${b+1}</div></div>`; }
+  $('#dg-boxes').innerHTML=html;
+  $('#dg-eq').innerHTML=`${total} ÷ ${per} = <span class="big">${grp}</span><br><span style="font-size:15px">봉지가 <b style="color:var(--c-dark)">${grp}개</b> 나와요</span>`; }
+
+/* ---------- 분수 ---------- */
+MODULES.frac={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 똑같이 나눈 조각</span>
+      <h3>🍕 전체를 똑같이 나눈 것 중 몇 조각</h3>
+      <p>똑같이 4조각 중 3조각 → <b>3/4</b> (사분의 삼)</p>
+      <p><b>분모(아래)</b>=나눈 수, <b>분자(위)</b>=고른 수</p></div>
+    <div class="card"><span class="method-tag">방법 2 · 막대 모델</span>
+      <h3>🍫 막대를 똑같이 잘라 색칠</h3>
+      <p>초콜릿을 똑같이 5칸으로 자르고 2칸 색칠 → <b>2/5</b>. 길이로 보면 분수가 더 쉬워요.</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 크기 비교</span>
+      <h3>⚖️ 많이 나눌수록 작아져요</h3>
+      <div class="formula" style="font-size:20px">1/2 &gt; 1/3 &gt; 1/4</div>
+      <div class="tipbox"><b>기억!</b> 분자가 1이면 <b>분모가 작을수록 더 큰 조각</b>!</div></div>`;
+  },
+  games:[
+    {name:'🍕 피자', build:buildFracPizza},
+    {name:'🍫 막대', build:buildFracBar},
+    {name:'⚖️ 비교', build:buildFracCompare},
+  ],
+  gens:[
+    {cat:'분자 읽기', make(){const n=rnd(3,8),m=rnd(1,n-1);return{visual:fracBar(n,m),q:`색칠한 칸이 <span class="b">분자</span>! 분자는?`,a:m,hint:`색칠된 칸 수를 세어요.`,t:{k:'fracNum',n,m}};}},
+    {cat:'분모 읽기', make(){const n=rnd(3,8),m=rnd(1,n-1);return{visual:fracBar(n,m),q:`전체로 나눈 수가 <span class="b">분모</span>! 분모는?`,a:n,hint:`칸이 모두 몇 개인가요?`,t:{k:'fracDen',n,m}};}},
+    {cat:'단위분수 비교', make(){let x=rnd(2,8),y=rnd(2,8);while(y===x)y=rnd(2,8);return{q:`1/${x} 와 1/${y} 중 <span class="b">더 큰</span> 분수의 분모는?`,a:Math.min(x,y),hint:`분모가 작을수록 조각이 커요!`,t:{k:'fracCmp',x,y}};}},
+    {cat:'남은 조각', make(){const n=rnd(4,10),m=rnd(1,n-1);return{q:`피자 ${n}조각 중 ${m}조각을 먹었어요. <span class="b">남은</span> 조각은?`,a:n-m,hint:`${n} - ${m}`,t:{k:'fracLeft',n,m}};}},
+  ]
+};
+function slicePath(cx,cy,r,a0,a1){ const x0=cx+r*Math.cos(a0),y0=cy+r*Math.sin(a0),x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),lg=(a1-a0)>Math.PI?1:0;
+  return `M${cx},${cy} L${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z`; }
+function fracBar(n,m){ let cells=''; for(let i=0;i<n;i++) cells+=`<div style="flex:1;height:38px;background:${i<m?'var(--c)':'#fff'};border-right:${i<n-1?'2px solid var(--c-dark)':'none'}"></div>`;
+  return `<div style="display:flex;border:3px solid var(--c-dark);border-radius:10px;overflow:hidden;max-width:280px;margin:0 auto">${cells}</div>`; }
+function buildFracPizza(host){
+  let n=4; window._fp={n,sh:new Set([0,1,2])};
+  host.innerHTML=`<div class="card frac-wrap">
+    <p class="cg-tip">🍕 조각을 눌러 색칠! 조각을 더 늘려보세요.</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">조각 수</span><button class="stepbtn" onclick="fpStep(-1)">－</button><span class="val" id="fp-nv">${n}</span><button class="stepbtn" onclick="fpStep(1)">＋</button></div></div>
+    <svg id="fp-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
+    <div class="cg-eq"><div class="frac-disp" id="fp-disp"></div></div></div>`;
+  drawFp();
+}
+function fpStep(d){ const s=window._fp; s.n=Math.max(2,Math.min(16,s.n+d)); s.sh=new Set(); $('#fp-nv').textContent=s.n; drawFp(); }
+function fpToggle(i){ const s=window._fp; if(s.sh.has(i))s.sh.delete(i); else s.sh.add(i); drawFp(); }
+function drawFp(){ const {n,sh}=window._fp; let p='';
+  for(let i=0;i<n;i++){ const a0=-Math.PI/2+i*2*Math.PI/n,a1=-Math.PI/2+(i+1)*2*Math.PI/n;
+    p+=`<path d="${slicePath(100,100,92,a0,a1)}" fill="${sh.has(i)?'var(--c)':'#fff'}" stroke="var(--c-dark)" stroke-width="2" style="cursor:pointer" onclick="fpToggle(${i})"></path>`; }
+  $('#fp-svg').innerHTML=p;
+  $('#fp-disp').innerHTML=`색칠 = <span class="l"><span class="n">${sh.size}</span><span>${n}</span></span>`; }
+
+function buildFracBar(host){
+  let n=5; window._fb={n,sh:new Set([0,1])};
+  host.innerHTML=`<div class="card frac-wrap">
+    <p class="cg-tip">🍫 초콜릿 칸을 눌러 색칠!</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">칸 수</span><button class="stepbtn" onclick="fbStep(-1)">－</button><span class="val" id="fb-nv">${n}</span><button class="stepbtn" onclick="fbStep(1)">＋</button></div></div>
+    <div class="bar-cells" id="fb-bar"></div>
+    <div class="cg-eq"><div class="frac-disp" id="fb-disp"></div></div></div>`;
+  drawFb();
+}
+function fbStep(d){ const s=window._fb; s.n=Math.max(2,Math.min(12,s.n+d)); s.sh=new Set(); $('#fb-nv').textContent=s.n; drawFb(); }
+function fbToggle(i){ const s=window._fb; if(s.sh.has(i))s.sh.delete(i); else s.sh.add(i); drawFb(); }
+function drawFb(){ const {n,sh}=window._fb; let c='';
+  for(let i=0;i<n;i++) c+=`<div style="background:${sh.has(i)?'var(--c)':'#fff'};border-right:${i<n-1?'2px solid var(--c-dark)':'none'}" onclick="fbToggle(${i})"></div>`;
+  $('#fb-bar').innerHTML=c;
+  $('#fb-disp').innerHTML=`색칠 = <span class="l"><span class="n">${sh.size}</span><span>${n}</span></span>`; }
+
+function buildFracCompare(host){
+  let a=2,b=4; window._fc={a,b};
+  host.innerHTML=`<div class="card frac-wrap">
+    <p class="cg-tip">⚖️ 단위분수 1/▢ 크기를 비교해요</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">1 /</span><button class="stepbtn" onclick="fcStep('a',-1)">－</button><span class="val" id="fc-av">${a}</span><button class="stepbtn" onclick="fcStep('a',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">1 /</span><button class="stepbtn" onclick="fcStep('b',-1)">－</button><span class="val" id="fc-bv">${b}</span><button class="stepbtn" onclick="fcStep('b',1)">＋</button></div>
+    </div>
+    <div id="fc-bars"></div>
+    <div class="cg-eq" id="fc-eq"></div></div>`;
+  drawFc();
+}
+function fcStep(w,d){ const s=window._fc; s[w]=Math.max(2,Math.min(10,s[w]+d)); $('#fc-av').textContent=s.a; $('#fc-bv').textContent=s.b; drawFc(); }
+function oneBar(den){ let c=''; for(let i=0;i<den;i++) c+=`<div style="flex:1;height:34px;background:${i===0?'var(--c)':'#fff'};border-right:${i<den-1?'2px solid var(--c-dark)':'none'}"></div>`;
+  return `<div style="display:flex;border:3px solid var(--c-dark);border-radius:10px;overflow:hidden;max-width:300px;margin:6px auto">${c}</div>`; }
+function drawFc(){ const {a,b}=window._fc;
+  $('#fc-bars').innerHTML=`<div>1/${a} ${oneBar(a)}</div><div>1/${b} ${oneBar(b)}</div>`;
+  let msg; if(a===b) msg=`두 분수는 똑같아요`; else { const big=Math.min(a,b); msg=`<b style="color:var(--c-dark)">1/${big}</b> 가 더 커요 (분모가 작을수록 큰 조각!)`; }
+  $('#fc-eq').innerHTML=`<span style="font-size:16px">${msg}</span>`; }
+
+/* ---------- 길이와 시간 ---------- */
+MODULES.len={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 단위 사다리</span>
+      <h3>📏 mm → cm → m → km</h3>
+      <div class="formula" style="font-size:17px">1cm=10mm · 1m=100cm · 1km=1000m</div>
+      <p>작은 단위로 갈 땐 ×, 큰 단위로 갈 땐 ÷. cm→mm는 <span class="hl">×10</span>.</p></div>
+    <div class="card"><span class="method-tag">방법 2 · 시계로 보는 시간</span>
+      <h3>⏰ 초 → 분 → 시간</h3>
+      <div class="formula" style="font-size:18px">1분=60초 · 1시간=60분</div>
+      <p>분→초는 <span class="hl">×60</span>, 초→분은 <span class="hl">÷60</span>.</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 단위 맞춰 계산</span>
+      <h3>⏱️ 섞이면 같은 단위로!</h3>
+      <p>예① <b>2분 30초 = ?초</b> → 120초 + 30초 = <b>150초</b></p>
+      <p>예② <b>2분 + 30초 = ?초</b> → 120 + 30 = <b>150초</b></p>
+      <p>예③ <b>3분씩 4번 = ?분</b> → 3×4 = <b>12분</b></p>
+      <div class="tipbox"><b>핵심</b> 더하기·빼기·곱하기 전에 "같은 단위로 바꾸기"가 먼저!</div></div>`;
+  },
+  games:[
+    {name:'📏 자', build:buildLenRuler},
+    {name:'⏰ 시간막대', build:buildLenTime},
+  ],
+  gens:[
+    {cat:'cm→mm', make(){const c=rnd(2,15);return{q:`${c} cm = ? <span class="b">mm</span>`,a:c*10,hint:`1cm=10mm. ${c}×10`,t:{k:'conv',v:c,f:10,op:'mul',bu:'cm',su:'mm'}};}},
+    {cat:'mm→cm', make(){const c=rnd(2,12),mm=c*10;return{q:`${mm} mm = ? <span class="b">cm</span>`,a:c,hint:`÷10. ${mm}÷10`,t:{k:'conv',v:mm,f:10,op:'div',bu:'mm',su:'cm'}};}},
+    {cat:'m→cm', make(){const m=rnd(2,9);return{q:`${m} m = ? <span class="b">cm</span>`,a:m*100,hint:`1m=100cm. ${m}×100`,t:{k:'conv',v:m,f:100,op:'mul',bu:'m',su:'cm'}};}},
+    {cat:'분→초', make(){const mi=rnd(2,10);return{q:`${mi}분 = ? <span class="b">초</span>`,a:mi*60,hint:`1분=60초. ${mi}×60`,t:{k:'conv',v:mi,f:60,op:'mul',bu:'분',su:'초'}};}},
+    {cat:'초→분', make(){const mi=rnd(2,6),s=mi*60;return{q:`${s}초 = ? <span class="b">분</span>`,a:mi,hint:`60초=1분. ${s}÷60`,t:{k:'conv',v:s,f:60,op:'div',bu:'초',su:'분'}};}},
+    {cat:'시간→분', make(){const h=rnd(2,5);return{q:`${h}시간 = ? <span class="b">분</span>`,a:h*60,hint:`1시간=60분. ${h}×60`,t:{k:'conv',v:h,f:60,op:'mul',bu:'시간',su:'분'}};}},
+    {cat:'분초→초', make(){const mi=rnd(1,5),s=rnd(1,5)*10;return{q:`${mi}분 ${s}초 = ? <span class="b">초</span>`,a:mi*60+s,hint:`${mi}분=${mi*60}초, +${s}초`,t:{k:'compound',big:mi,small:s,f:60,bu:'분',su:'초'}};}},
+    {cat:'단위맞춰 더하기', make(){const mi=rnd(1,4),s=rnd(1,5)*10;return{q:`${mi}분 + ${s}초 = ? <span class="b">초</span>`,a:mi*60+s,hint:`${mi}분을 초로! ${mi*60}+${s}`,t:{k:'unitOp',big:mi,small:s,f:60,bu:'분',su:'초',sign:1}};}},
+    {cat:'단위맞춰 빼기', make(){const mi=rnd(2,5),s=rnd(1,4)*10;return{q:`${mi}분 - ${s}초 = ? <span class="b">초</span>`,a:mi*60-s,hint:`${mi}분=${mi*60}초, ${mi*60}-${s}`,t:{k:'unitOp',big:mi,small:s,f:60,bu:'분',su:'초',sign:-1}};}},
+    {cat:'시간 곱하기', make(){const m=rnd(2,6),k=rnd(2,5);return{q:`${m}분씩 ${k}번이면 ? <span class="b">분</span>`,a:m*k,hint:`${m}×${k}`,t:{k:'mul',a:m,b:k}};}},
+    {cat:'시간 나누기', make(){const k=rnd(2,5),q2=rnd(2,6),t=k*q2;return{q:`${t}분을 ${k}묶음으로 똑같이 나누면 ? <span class="b">분</span>`,a:q2,hint:`${t}÷${k}`,t:{k:'divMul',a:t,b:k,c:q2}};}},
+  ]
+};
+function buildLenRuler(host){
+  let cm=4; window._lr={cm};
+  host.innerHTML=`<div class="card"><p class="cg-tip">📏 자로 보는 cm ↔ mm</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">길이</span><button class="stepbtn" onclick="lrStep(-1)">－</button><span class="val" id="lr-v">${cm}</span><span style="font-weight:800">cm</span><button class="stepbtn" onclick="lrStep(1)">＋</button></div></div>
+    <div class="ruler" id="lr-ruler"></div><div class="cg-eq" id="lr-eq"></div></div>`;
+  drawLr();
+}
+function lrStep(d){ const s=window._lr; s.cm=Math.max(1,Math.min(15,s.cm+d)); $('#lr-v').textContent=s.cm; drawLr(); }
+function drawLr(){ const {cm}=window._lr; const max=15; let t='';
+  for(let i=0;i<=max;i++){ t+=`<div class="tick cm" style="left:${i/max*100}%"><span class="n">${i}</span></div>`;
+    if(i<max) for(let j=1;j<10;j++) t+=`<div class="tick" style="left:${(i+j/10)/max*100}%;height:14px"></div>`; }
+  $('#lr-ruler').innerHTML=`<div class="fill" style="width:${cm/max*100}%"></div>${t}`;
+  $('#lr-eq').innerHTML=`${cm} cm = <span class="big">${cm*10}</span> mm <span style="font-size:14px;color:var(--soft)">(×10)</span>`; }
+
+function buildLenTime(host){
+  let min=2; window._lt={min};
+  host.innerHTML=`<div class="card"><p class="cg-tip">⏰ 1분 = 60초 막대로 보는 분 ↔ 초</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">시간</span><button class="stepbtn" onclick="ltStep(-1)">－</button><span class="val" id="lt-v">${min}</span><span style="font-weight:800">분</span><button class="stepbtn" onclick="ltStep(1)">＋</button></div></div>
+    <div class="seg-row" id="lt-seg"></div><div class="cg-eq" id="lt-eq"></div></div>`;
+  drawLt();
+}
+function ltStep(d){ const s=window._lt; s.min=Math.max(1,Math.min(6,s.min+d)); $('#lt-v').textContent=s.min; drawLt(); }
+function drawLt(){ const {min}=window._lt; let seg=''; for(let i=0;i<min;i++) seg+=`<div class="seg">60초<br>(1분)</div>`;
+  $('#lt-seg').innerHTML=seg;
+  $('#lt-eq').innerHTML=`${min}분 = ${Array(min).fill(60).join(' + ')} = <span class="big">${min*60}</span>초`; }
+
+/* ---------- 들이와 무게 ---------- */
+MODULES.cap={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 들이(L·mL)</span>
+      <h3>🥤 통에 담기는 양</h3>
+      <div class="formula" style="font-size:20px">1 L = 1000 mL</div>
+      <p>L→mL는 <span class="hl">×1000</span>, mL→L는 <span class="hl">÷1000</span>.</p></div>
+    <div class="card"><span class="method-tag">방법 2 · 무게(kg·g)</span>
+      <h3>⚖️ 얼마나 무거운지</h3>
+      <div class="formula" style="font-size:20px">1 kg = 1000 g</div>
+      <p>kg→g는 <span class="hl">×1000</span>, g→kg는 <span class="hl">÷1000</span>.</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 단위 맞춰 계산</span>
+      <h3>🧮 섞이면 작은 단위로!</h3>
+      <p>예① <b>1L 200mL = ?mL</b> → 1000+200 = <b>1200mL</b></p>
+      <p>예② <b>1L + 500mL = ?mL</b> → 1000+500 = <b>1500mL</b></p>
+      <p>예③ <b>2kg - 300g = ?g</b> → 2000-300 = <b>1700g</b></p></div>`;
+  },
+  games:[
+    {name:'🥤 비커', build:buildCapBeaker},
+    {name:'⚖️ 저울', build:buildCapScale},
+  ],
+  gens:[
+    {cat:'L→mL', make(){const l=rnd(2,8);return{q:`${l} L = ? <span class="b">mL</span>`,a:l*1000,hint:`1L=1000mL. ${l}×1000`,t:{k:'conv',v:l,f:1000,op:'mul',bu:'L',su:'mL'}};}},
+    {cat:'mL→L', make(){const l=rnd(2,6),ml=l*1000;return{q:`${ml} mL = ? <span class="b">L</span>`,a:l,hint:`1000mL=1L. ${ml}÷1000`,t:{k:'conv',v:ml,f:1000,op:'div',bu:'mL',su:'L'}};}},
+    {cat:'kg→g', make(){const k=rnd(2,7);return{q:`${k} kg = ? <span class="b">g</span>`,a:k*1000,hint:`1kg=1000g. ${k}×1000`,t:{k:'conv',v:k,f:1000,op:'mul',bu:'kg',su:'g'}};}},
+    {cat:'g→kg', make(){const k=rnd(2,8),g=k*1000;return{q:`${g} g = ? <span class="b">kg</span>`,a:k,hint:`1000g=1kg. ${g}÷1000`,t:{k:'conv',v:g,f:1000,op:'div',bu:'g',su:'kg'}};}},
+    {cat:'복합→mL', make(){const l=rnd(1,4),ml=rnd(1,9)*100;return{q:`${l}L ${ml}mL = ? <span class="b">mL</span>`,a:l*1000+ml,hint:`${l}L=${l*1000}mL, +${ml}`,t:{k:'compound',big:l,small:ml,f:1000,bu:'L',su:'mL'}};}},
+    {cat:'복합→g', make(){const k=rnd(1,4),g=rnd(1,9)*100;return{q:`${k}kg ${g}g = ? <span class="b">g</span>`,a:k*1000+g,hint:`${k}kg=${k*1000}g, +${g}`,t:{k:'compound',big:k,small:g,f:1000,bu:'kg',su:'g'}};}},
+    {cat:'들이 더하기', make(){const l=rnd(1,3),ml=rnd(1,5)*100;return{q:`${l}L + ${ml}mL = ? <span class="b">mL</span>`,a:l*1000+ml,hint:`${l}L=${l*1000}mL 로 맞춰요`,t:{k:'unitOp',big:l,small:ml,f:1000,bu:'L',su:'mL',sign:1}};}},
+    {cat:'무게 빼기', make(){const k=rnd(2,4),g=rnd(1,5)*100;return{q:`${k}kg - ${g}g = ? <span class="b">g</span>`,a:k*1000-g,hint:`${k}kg=${k*1000}g, -${g}`,t:{k:'unitOp',big:k,small:g,f:1000,bu:'kg',su:'g',sign:-1}};}},
+  ]
+};
+function buildCapBeaker(host){
+  let ml=500; window._cb={ml};
+  host.innerHTML=`<div class="card" style="text-align:center"><p class="cg-tip">🥤 비커에 물을 채워요 (1000mL=1L)</p>
+    <div class="beaker" id="cb-bk"></div>
+    <div class="ctrl-row" style="margin-top:14px">
+      <button class="stepbtn" style="width:48px;height:44px" onclick="cbStep(-100)">－</button>
+      <div class="scale-read" id="cb-read" style="margin:0;min-width:130px"></div>
+      <button class="stepbtn" style="width:48px;height:44px" onclick="cbStep(100)">＋</button></div></div>`;
+  drawCb();
+}
+function cbStep(d){ const s=window._cb; s.ml=Math.max(0,Math.min(2000,s.ml+d)); drawCb(); }
+function drawCb(){ const {ml}=window._cb;
+  $('#cb-bk').innerHTML=`<div class="liquid" style="height:${ml/2000*100}%"></div><div class="mark" style="bottom:50%"><span>1L</span></div><div class="mark" style="bottom:100%"><span>2L</span></div>`;
+  $('#cb-read').innerHTML=`${ml} mL ${ml>0&&ml%1000===0?`= <b>${ml/1000}L</b>`:''}`; }
+
+function buildCapScale(host){
+  let g=300; window._cs={g};
+  host.innerHTML=`<div class="card" style="text-align:center"><p class="cg-tip">⚖️ 무게도 같은 약속 (1000g=1kg)</p>
+    <div style="font-size:50px">⚖️</div><div class="scale-beam" id="cs-beam"></div>
+    <div class="ctrl-row" style="margin-top:14px">
+      <button class="stepbtn" style="width:48px;height:44px" onclick="csStep(-100)">－</button>
+      <div class="scale-read" id="cs-read" style="margin:0;min-width:130px"></div>
+      <button class="stepbtn" style="width:48px;height:44px" onclick="csStep(100)">＋</button></div></div>`;
+  drawCs();
+}
+function csStep(d){ const s=window._cs; s.g=Math.max(0,Math.min(3000,s.g+d)); drawCs(); }
+function drawCs(){ const {g}=window._cs; const tilt=(g/3000)*16-8;
+  $('#cs-beam').style.transform=`rotate(${tilt}deg)`;
+  $('#cs-read').innerHTML=`${g} g ${g>0&&g%1000===0?`= <b>${g/1000}kg</b>`:''}`; }
+
+/* ===================== 시작 + PWA ===================== */
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+home();
+</script>
+</body>
+</html>

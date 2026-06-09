@@ -1,0 +1,15 @@
+{
+  "name": "리원이 수학 놀이터",
+  "short_name": "리원수학",
+  "description": "초3 수학 개념·그림게임·퀴즈·복습 + 아이돌 카드 수집",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff9f0",
+  "theme_color": "#ff9f43",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
