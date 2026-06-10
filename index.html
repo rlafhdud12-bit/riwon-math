@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="리원수학">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg">
 <title>리원이 수학 놀이터 🧮</title>
 <style>
@@ -226,8 +226,10 @@ function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 /* ===================== 저장 (on-device) ===================== */
 const SKEY='riwon_math_v2';
 let DB=loadDB();
-function freshDB(){ return {v:2, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], created:Date.now()}; }
-function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units) return d; }catch(e){} return freshDB(); }
+function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; return d; } }catch(e){} return freshDB(); }
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
 function unitDB(id){ return DB.units[id] = DB.units[id] || {clears:0, solved:0, correct:0, wrong:0, cats:{}, bank:0, review:0}; }
 
@@ -238,6 +240,7 @@ function markStat(unitId,cat,ok){
   c.seen++; if(!ok)c.wrong++;
   u.solved++; if(ok)u.correct++; else u.wrong++;
   DB.totalSolved++; if(ok)DB.totalCorrect++;
+  const dr=dayRec(); dr.s++; if(ok)dr.c++;
 }
 function addWrong(c){
   const key=c.unitId+'|'+c.q;
@@ -310,20 +313,49 @@ const LINES={
   clear:['한 단원 클리어! 너무 자랑스러워 🏆','챕터 깼다! 리원이 짱 💖','오늘도 해냈어, 최고야 ✨'],
 };
 let popupTimer=null, lastPopupAt=0;
-function activeIdol(){ return DB.cards.length? ROSTER[pick(DB.cards)] : ROSTER[0]; }
+function idolArt(c){ return c.img?`<img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover">`:idolFace(c); }
+function activeIdol(){
+  const pool=DB.cards.map(i=>ROSTER[i]).concat(DB.fam);
+  return pool.length?pick(pool):ROSTER[0];
+}
 function idolPopup(msg, big, forceIdol){
   const c=forceIdol||activeIdol();
   let el=document.getElementById('popup');
   if(!el){ el=document.createElement('div'); el.id='popup'; el.className='idol-pop'; document.body.appendChild(el); }
-  el.innerHTML=`<div class="pop-art">${idolFace(c)}</div><div class="pop-bubble"><b>${c.name}</b><br>${msg}</div>`;
+  el.innerHTML=`<div class="pop-art">${idolArt(c)}</div><div class="pop-bubble"><b>${c.name}</b><br>${msg}</div>`;
   void el.offsetWidth; el.classList.add('show');
   clearTimeout(popupTimer);
   popupTimer=setTimeout(()=>el.classList.remove('show'), big?3400:2500);
 }
 
+/* ===================== 효과음 (외부파일 없는 WebAudio) ===================== */
+let AC=null;
+function sfx(kind){
+  if(DB.muted) return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const t=AC.currentTime;
+    const seq = kind==='ok' ? [[523,0],[659,.09],[784,.18]]
+            : kind==='no' ? [[330,0],[262,.14]]
+            : kind==='win'? [[523,0],[659,.1],[784,.2],[1047,.32]]
+            : [[440,0]];
+    seq.forEach(([f,d])=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t+d);
+      g.gain.exponentialRampToValueAtTime(.16,t+d+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,t+d+.22);
+      o.connect(g); g.connect(AC.destination);
+      o.start(t+d); o.stop(t+d+.26);
+    });
+  }catch(e){}
+}
+function toggleMute(){ DB.muted=!DB.muted; saveDB(); home(); }
+
 /* ===================== 공부 시간 시계 ===================== */
 let studyTick=null;
-function startStudyClock(){ stopStudyClock(); studyTick=setInterval(()=>{ if(document.visibilityState==='visible'){ DB.studySeconds+=5; saveDB(); } },5000); }
+function startStudyClock(){ stopStudyClock(); studyTick=setInterval(()=>{ if(document.visibilityState==='visible'){ DB.studySeconds+=5; dayRec().sec+=5; saveDB(); } },5000); }
 function stopStudyClock(){ if(studyTick){clearInterval(studyTick); studyTick=null;} }
 
 /* ===================== 라우팅 ===================== */
@@ -348,6 +380,7 @@ function home(){
       <span class="wpill">🎟️ 스티커 ${DB.stickers}</span>
       <span class="wpill">🎴 카드 ${DB.cards.length}/${ROSTER.length}</span>
       <span class="wpill">📚 ${DB.totalSolved}문제</span>
+      <button class="wpill" onclick="toggleMute()" title="효과음 켜기/끄기">${DB.muted?'🔇':'🔊'}</button>
     </div>
     <div class="unit-grid">${cards}</div>
     <div class="home-btns">
@@ -486,7 +519,7 @@ function submit(){
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   markStat(P.unitId,c.cat,ok);
   if(ok){
-    P.locked=true; P.streak++; P.corr++; confetti(false);
+    P.locked=true; P.streak++; P.corr++; confetti(false); sfx('ok');
     fb.className='feedback ok'; fb.textContent='정답이에요! 🎉'; $('#ans').style.borderColor='#19a974';
     if(P.mode==='master'){ P.solved.add(c.id); P.score+=c.retry?3:5; }
     else if(P.mode==='bank'){ P.score+=10; P.count++; }
@@ -499,7 +532,7 @@ function submit(){
     saveDB();
     later(advance,1000);
   } else {
-    P.locked=true; P.awaitNext=true; P.streak=0;
+    P.locked=true; P.awaitNext=true; P.streak=0; sfx('no');
     fb.className='feedback no'; fb.textContent='앗! 정답은 '+c.a+' 예요. 왜 그런지 천천히 살펴보자 👀'; $('#ans').style.borderColor='#e8503a';
     $('#hint').classList.add('show');
     if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); }
@@ -546,7 +579,7 @@ function finishMaster(){
   if(P.retry===0){ stars='⭐⭐⭐'; msg='한 번도 안 틀렸어요! 완벽해요!'; }
   else if(P.retry<=3){ stars='⭐⭐'; msg='거의 다 맞혔어요. 정말 잘했어요!'; }
   else { stars='⭐'; msg='끝까지 다 풀었어요. 포기 안 한 게 최고!'; }
-  confetti(true); idolPopup(pick(LINES.clear), true);
+  confetti(true); sfx('win'); idolPopup(pick(LINES.clear), true);
   P.body.innerHTML=`
     <div class="result card">
       <div class="stars">${stars}</div>
@@ -566,7 +599,7 @@ function finishBank(){
   unitDB(P.unitId).bank+=P.count; if(P.count>0) logEvent(P.unitId,'bank',P.count);
   const newCards=checkCardUnlocks(); saveDB();
   const acc=P.count?Math.round(correct/P.count*100):0; const worst=worstCat(P.unitId);
-  confetti(true);
+  confetti(true); sfx('win');
   P.body.innerHTML=`
     <div class="result card">
       <div class="stars">🏦</div>
@@ -584,7 +617,7 @@ function finishReview(){
   const P=PLAY; P.cur=null; const reward=Math.floor(P.fixed/2); addStickers(reward);
   unitDB(P.unitId).review+=P.fixed; if(P.fixed>0) logEvent(P.unitId,'review',P.fixed);
   const newCards=checkCardUnlocks(); saveDB();
-  confetti(true);
+  confetti(true); sfx('win');
   P.body.innerHTML=`
     <div class="result card">
       <div class="stars">📘✨</div>
@@ -651,13 +684,58 @@ function renderDashboard(){
         <div class="dash-stat"><div class="v">🏆 ${UNITS.reduce((s,u)=>s+unitDB(u.id).clears,0)}</div><div class="k">단원 클리어</div></div>
       </div>
     </div>
+    <div class="card"><h3>📅 최근 7일, 매일 얼마나 풀었나</h3>${weekChart()}</div>
     <div class="card"><h3>📚 단원별 공부량</h3>${unitRows}</div>
     <div class="card"><h3>🔎 더 연습이 필요한 유형</h3><div style="display:flex;flex-wrap:wrap">${weak}</div></div>
     <div class="card"><h3>🕒 최근 활동</h3>${logs}</div>
     <div class="card" style="text-align:center">
       <button class="bigbtn ghost" onclick="renderGallery()">🎴 카드 모음 보기</button>
+      <button class="bigbtn ghost" onclick="exportData()">💾 백업 저장하기</button>
+      <button class="bigbtn ghost" onclick="document.getElementById('impfile').click()">📥 백업 불러오기</button>
+      <input type="file" id="impfile" accept=".json,application/json" style="display:none" onchange="importData(this)">
       <button class="bigbtn ghost" style="border-color:#e8503a;color:#e8503a" onclick="resetAll()">🗑️ 기록 초기화</button>
     </div>`;
+}
+function weekChart(){
+  const names=['일','월','화','수','목','금','토'];
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(Date.now()-i*86400000);
+    const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const r=DB.days[k]||{s:0,c:0,sec:0};
+    days.push({lab:names[d.getDay()], s:r.s, sec:r.sec, today:i===0});
+  }
+  const mx=Math.max(1,...days.map(x=>x.s));
+  return `<div style="display:flex;gap:6px;align-items:flex-end;height:110px;padding-top:8px">
+    ${days.map(d=>`<div style="flex:1;text-align:center">
+      <div style="font-size:11px;font-weight:800;color:var(--c-dark)">${d.s||''}</div>
+      <div style="height:${Math.round(d.s/mx*70)+4}px;background:${d.today?'var(--c-dark)':'var(--c)'};border-radius:6px 6px 0 0;opacity:${d.s?1:.25}"></div>
+      <div style="font-size:11px;font-weight:700;color:${d.today?'var(--c-dark)':'var(--soft)'}">${d.lab}</div>
+      <div style="font-size:10px;color:var(--soft)">${d.sec?Math.round(d.sec/60)+'분':''}</div>
+    </div>`).join('')}
+  </div>`;
+}
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify(DB)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='리원수학_백업_'+todayKey()+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ alert('백업 저장에 실패했어요.'); }
+}
+function importData(input){
+  const f=input.files&&input.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(!d||!d.units) throw 0;
+      localStorage.setItem(SKEY, JSON.stringify(d));
+      DB=loadDB(); input.value='';
+      alert('백업을 불러왔어요!'); home();
+    }catch(e){ alert('백업 파일이 아니에요.'); }
+  };
+  rd.readAsText(f);
 }
 function resetAll(){
   if(!confirm('정말 모든 기록(스티커·카드·공부 기록)을 지울까요? 되돌릴 수 없어요.')) return;
@@ -679,7 +757,45 @@ function renderGallery(){
       <p style="margin:0;color:var(--soft);font-size:14px">${next?`다음 카드 <b>${next.name}</b>까지 스티커 ${Math.max(0,next.cost-DB.stickersEver)}개!`:'모든 카드를 모았어요! 대단해요 🏆'}</p>
     </div>
     <div class="card"><div class="gallery">${cards}</div></div>
+    <div class="card">
+      <h3>📷 우리 가족 응원단</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">가족·친구 사진을 카드로 만들면, 문제 풀 때 그 사진이 응원해줘요!<br>사진은 <b>이 기기에만</b> 저장돼요 (인터넷에 안 올라감)</p>
+      <div class="gallery">
+        ${DB.fam.map((f,i)=>`<div class="idol-card">
+          <div class="idol-art"><img src="${f.img}" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+          <div class="idol-name">${f.name}</div>
+          <div class="idol-cost"><button style="background:none;border:none;color:#e8503a;font-weight:800;cursor:pointer" onclick="delFamilyCard(${i})">삭제</button></div>
+        </div>`).join('')}
+        <button class="idol-card" style="border:3px dashed var(--c);background:var(--bg);min-height:120px;font-size:34px;color:var(--c-dark)" onclick="document.getElementById('famfile').click()">＋<div style="font-size:12px;font-weight:800">사진 추가</div></button>
+      </div>
+      <input type="file" id="famfile" accept="image/*" style="display:none" onchange="addFamilyCard(this)">
+    </div>
     <div class="credit">공부하고 스티커를 모으면 카드가 한 명씩 열려요. 새 단원을 깨면 더 빨리 모여요!</div>`;
+}
+function addFamilyCard(input){
+  const f=input.files&&input.files[0]; if(!f)return;
+  if(DB.fam.length>=8){ alert('가족 카드는 8장까지예요!'); input.value=''; return; }
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const cv=document.createElement('canvas'); cv.width=300; cv.height=340;
+      const s=Math.min(img.width,img.height*300/340);
+      const sw=s, sh=s*340/300;
+      const ctx=cv.getContext('2d');
+      ctx.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,0,0,300,340);
+      const url=cv.toDataURL('image/jpeg',.82);
+      const name=(prompt('이 카드의 이름을 지어줘! (예: 엄마, 도율이)','우리가족')||'우리가족').slice(0,8);
+      DB.fam.push({name, img:url, line:name+'! 항상 응원해 💖'});
+      saveDB(); input.value=''; renderGallery();
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+function delFamilyCard(i){
+  if(!confirm('이 카드를 지울까요?'))return;
+  DB.fam.splice(i,1); saveDB(); renderGallery();
 }
 
 /* ===================== 🙋 도와주세요 (인강 튜터) =====================
@@ -830,8 +946,8 @@ function tutorCheck(){
   const T=window._TT, b=T.beats[T.i]; if(T.buf===''||T.locked)return;
   const fb=$('#tfb'), val=parseInt(T.buf,10);
   T.locked=true;
-  if(val===b.a){ fb.className='feedback ok'; fb.textContent='딩동댕! 맞았어 👏'; confetti(false); later(tutorNext,950); }
-  else { fb.className='feedback no'; fb.textContent='괜찮아! '+(b.reteach||('정답은 '+b.a)); later(tutorNext,2400); }
+  if(val===b.a){ fb.className='feedback ok'; fb.textContent='딩동댕! 맞았어 👏'; confetti(false); sfx('ok'); later(tutorNext,950); }
+  else { fb.className='feedback no'; fb.textContent='괜찮아! '+(b.reteach||('정답은 '+b.a)); sfx('no'); later(tutorNext,2400); }
 }
 function closeHelp(){ const P=PLAY; if(!P)return; clearTimers(); P.helping=false; P.buf='';
   const adv=window._TT&&window._TT.adv;
