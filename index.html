@@ -265,18 +265,18 @@ function rewardForClear(n){ return n<CLEAR_REWARD.length?CLEAR_REWARD[n]:1; }
 function addStickers(n){ if(n<=0)return; DB.stickers+=n; DB.stickersEver+=n; }
 
 /* ===================== 아이돌 카드 (오리지널 캐릭터) ===================== */
-const GROUP='드림스타 ✨';
+const GROUP='리원·도율 포토카드 📸';
 const ROSTER=[
-  {name:'별이',  hair:'#ffd24d', outfit:'#ff7aa2', acc:'⭐', cost:10,  line:'리원아, 별처럼 반짝이는 두뇌야! ⭐'},
-  {name:'하나',  hair:'#ff8fb1', outfit:'#7ad0ff', acc:'🎀', cost:24,  line:'하나하나 차근차근, 넌 잘하고 있어! 🎀'},
-  {name:'라라',  hair:'#9b8cff', outfit:'#ffd24d', acc:'🎵', cost:42,  line:'라라라~ 수학이 노래처럼 즐거워지지? 🎵'},
-  {name:'미미',  hair:'#6ce0c0', outfit:'#ff9f43', acc:'💎', cost:64,  line:'반짝반짝, 미미는 리원이 팬이야! 💎'},
-  {name:'소이',  hair:'#ffb36b', outfit:'#a78bfa', acc:'🌸', cost:90,  line:'소이가 응원해, 한 걸음씩 가자! 🌸'},
-  {name:'유나',  hair:'#7ad0ff', outfit:'#ff7aa2', acc:'💙', cost:120, line:'유나는 포기 안 하는 네가 제일 멋져! 💙'},
-  {name:'보라',  hair:'#b18cff', outfit:'#6ce0c0', acc:'💜', cost:155, line:'보랏빛 무대처럼, 넌 주인공이야! 💜'},
-  {name:'코코',  hair:'#ff9f6b', outfit:'#ffd24d', acc:'🍫', cost:195, line:'코코랑 달콤하게 한 문제 더! 🍫'},
-  {name:'민트',  hair:'#71e0b8', outfit:'#7ad0ff', acc:'🌿', cost:240, line:'민트처럼 상쾌하게, 집중 좋아! 🌿'},
-  {name:'루비',  hair:'#ff6f91', outfit:'#9b8cff', acc:'❤️', cost:290, line:'루비처럼 빛나는 노력! 최고야 ❤️'},
+  {name:'미소천사 리원', img:'photos/r1.jpg', hair:'#ffd24d', outfit:'#ff7aa2', acc:'⭐', cost:10,  line:'이 미소 주인공처럼 활짝 웃으면서 풀자! ⭐'},
+  {name:'여행가 도율',   img:'photos/d1.jpg', hair:'#7ad0ff', outfit:'#a9c8ff', acc:'✈️', cost:24,  line:'누나 최고! 도율이가 응원해 ✈️'},
+  {name:'반짝반짝 리원', img:'photos/r2.jpg', hair:'#ffb36b', outfit:'#ffd24d', acc:'🌟', cost:42,  line:'두 손 모아 응원 중! 넌 할 수 있어 🌟'},
+  {name:'신난 도율',     img:'photos/d2.jpg', hair:'#7ad0ff', outfit:'#6ce0c0', acc:'🌊', cost:64,  line:'우와~!! 누나 진짜 잘한다!! 🌊'},
+  {name:'물놀이 리원',   img:'photos/r3.jpg', hair:'#9bd6ff', outfit:'#ff9ff3', acc:'🩵', cost:90,  line:'시원하게 한 문제씩! 가보자~ 🩵'},
+  {name:'수영선수 도율', img:'photos/d3.jpg', hair:'#71e0b8', outfit:'#7ad0ff', acc:'🏊', cost:120, line:'풍덩! 어려운 문제도 헤엄쳐 건너자 🏊'},
+  {name:'멋쟁이 리원',   img:'photos/r4.jpg', hair:'#b18cff', outfit:'#8fa3c8', acc:'🎓', cost:155, line:'교복도 멋진 우리 리원, 공부도 멋져! 🎓'},
+  {name:'꼬마 리원',     img:'photos/r5.jpg', hair:'#ff8fb1', outfit:'#ffd24d', acc:'🍓', cost:195, line:'아기 때부터 이렇게 똑똑했답니다 🍓'},
+  {name:'토끼안경 리원', img:'photos/r6.jpg', hair:'#ff9ff3', outfit:'#ffb36b', acc:'🐰', cost:240, line:'토끼처럼 깡총! 문제도 깡총 넘자 🐰'},
+  {name:'제주 남매',     img:'photos/b1.jpg', hair:'#6ce0c0', outfit:'#ffd24d', acc:'🌴', cost:290, line:'리원·도율 남매가 함께 응원해! 🌴'},
   {name:'초아',  hair:'#ffd24d', outfit:'#71e0b8', acc:'✨', cost:345, line:'초아는 알아, 넌 매일 자라고 있어 ✨'},
   {name:'달이',  hair:'#a9b4ff', outfit:'#ff9f43', acc:'🌙', cost:410, line:'달이랑 끝까지! 오늘도 수고했어 🌙'},
 ];
@@ -565,7 +565,7 @@ function rewardCardHTML(newCards){
   if(!newCards.length) return '';
   return newCards.map(i=>{ const c=ROSTER[i];
     return `<div class="reward-banner">🎴 새 카드 획득! <b>${c.name}</b><br>
-      <div style="width:110px;height:130px;margin:8px auto;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,${c.hair},${c.outfit})">${idolFace(c)}</div>
+      <div style="width:110px;height:130px;margin:8px auto;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,${c.hair},${c.outfit})">${idolArt(c)}</div>
       <span style="font-size:14px;font-weight:700;color:var(--soft)">"${c.line}"</span></div>`;
   }).join('');
 }
@@ -747,7 +747,7 @@ function renderGallery(){
   const next=ROSTER.find((c,i)=>DB.cards.indexOf(i)<0);
   const cards=ROSTER.map((c,i)=>{ const owned=DB.cards.indexOf(i)>=0;
     return `<div class="idol-card ${owned?'':'locked'}" style="--g1:${c.outfit};--g2:${c.hair}">
-      <div class="idol-art">${owned?idolFace(c):'<div class="lock">🔒</div>'}</div>
+      <div class="idol-art">${owned?idolArt(c):'<div class="lock">🔒</div>'}</div>
       <div class="idol-name">${owned?c.name:'? ? ?'}</div>
       <div class="idol-cost">🎟️ ${c.cost}</div></div>`; }).join('');
   app.innerHTML=`
