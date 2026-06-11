@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg">
-<title>리원이 수학 놀이터 🧮</title>
+<title>리원이 공부 놀이터 ✨</title>
 <style>
   :root{ --c:#ff9f43; --c-dark:#e67e22; --bg:#fff9f0; --ink:#33323a; --soft:#7a7785; }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -144,6 +144,24 @@
   .key.ok{background:var(--c); color:#fff; border-color:var(--c); font-size:19px;}
   .stopbtn{background:#fff; border:2px solid var(--c); color:var(--c-dark); border-radius:14px; padding:6px 12px; font-size:14px; font-weight:800;}
 
+  /* 객관식 */
+  .choice-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:16px;}
+  .choice-btn{background:#fff; border:2.5px solid #eee; border-radius:16px; padding:14px 8px; font-size:16px; font-weight:800; color:var(--ink); box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .choice-btn:active{transform:scale(.96);}
+  .choice-btn.correct{border-color:#19a974; background:#e7f9f1; color:#0e7d57;}
+  .choice-btn.wrongpick{border-color:#e8503a; background:#fdecea; color:#c0392b;}
+  .choice-btn:disabled{opacity:.95;}
+
+  /* 짝맞추기 게임 */
+  .match-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .match-card{background:#fff; border:2.5px solid #eee; border-radius:14px; min-height:64px; padding:8px 4px; font-size:14px; font-weight:800; color:var(--ink); box-shadow:0 3px 8px rgba(0,0,0,.05);}
+  .match-card.sel{border-color:var(--c); background:var(--bg); transform:scale(1.05);}
+  .match-card.done{border-color:#19a974; background:#e7f9f1; color:#0e7d57;}
+
+  /* 과목 구분 */
+  .subj-head{display:flex; align-items:center; gap:7px; font-size:17px; font-weight:900; margin:18px 2px 2px;}
+  .subj-head .line{flex:1; height:2px; background:#eee; border-radius:2px;}
+
   /* 분석 */
   .cat-row{margin-bottom:10px;}
   .cat-row .lab{display:flex; justify-content:space-between; font-weight:800; font-size:14px;}
@@ -205,12 +223,28 @@
    외부 라이브러리 없음. 아이돌 캐릭터는 모두 오리지널 일러스트(저작권 무관).
    ========================================================= */
 
+const SUBJECTS=[
+  {id:'math', name:'수학', emoji:'🧮'},
+  {id:'kor',  name:'국어', emoji:'📖'},
+  {id:'eng',  name:'영어', emoji:'🔤'},
+  {id:'sci',  name:'과학', emoji:'🔬'},
+  {id:'soc',  name:'사회', emoji:'🏘️'},
+];
 const UNITS = [
-  {id:'mul',  emoji:'🐸', name:'곱셈',        sub:'몇 배로 늘어나기',  c:'#ff9f43', cd:'#e67e22'},
-  {id:'div',  emoji:'🍪', name:'나눗셈',      sub:'똑같이 나누기',     c:'#ee5253', cd:'#c0392b'},
-  {id:'frac', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f'},
-  {id:'len',  emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6'},
-  {id:'cap',  emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf'},
+  {id:'mul',  subj:'math', emoji:'🐸', name:'곱셈',        sub:'몇 배로 늘어나기',  c:'#ff9f43', cd:'#e67e22'},
+  {id:'div',  subj:'math', emoji:'🍪', name:'나눗셈',      sub:'똑같이 나누기',     c:'#ee5253', cd:'#c0392b'},
+  {id:'frac', subj:'math', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f'},
+  {id:'len',  subj:'math', emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6'},
+  {id:'cap',  subj:'math', emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf'},
+  {id:'kor1', subj:'kor',  emoji:'✏️', name:'맞춤법 달인', sub:'헷갈리는 말 정복',  c:'#f368e0', cd:'#c23593'},
+  {id:'kor2', subj:'kor',  emoji:'🔄', name:'반대말·비슷한말', sub:'낱말의 짝꿍 찾기', c:'#ff6b81', cd:'#d63050'},
+  {id:'kor3', subj:'kor',  emoji:'🙇', name:'높임말 예절', sub:'어른께 바르게 말하기', c:'#a55eea', cd:'#8043c9'},
+  {id:'eng1', subj:'eng',  emoji:'🔤', name:'알파벳',      sub:'ABC와 첫소리',      c:'#54a0ff', cd:'#2e6fd1'},
+  {id:'eng2', subj:'eng',  emoji:'🦁', name:'영어 단어',   sub:'동물·색깔·인사',    c:'#3aa6dd', cd:'#2380b5'},
+  {id:'sci1', subj:'sci',  emoji:'🧲', name:'자석',        sub:'밀고 당기는 힘',    c:'#1dd1a1', cd:'#0e9c77'},
+  {id:'sci2', subj:'sci',  emoji:'🦋', name:'동물의 한살이', sub:'알에서 어른까지',  c:'#6ab04c', cd:'#4f8a39'},
+  {id:'soc1', subj:'soc',  emoji:'🏺', name:'옛날과 오늘날', sub:'교통·통신·도구',   c:'#cc8e35', cd:'#a36b1f'},
+  {id:'soc2', subj:'soc',  emoji:'🗺️', name:'우리 고장',   sub:'장소와 지도',       c:'#778beb', cd:'#5868c9'},
 ];
 
 const $ = (s,el=document)=>el.querySelector(s);
@@ -246,7 +280,7 @@ function addWrong(c){
   const key=c.unitId+'|'+c.q;
   const e=DB.wrong.find(w=>w.key===key);
   if(e) e.miss++;
-  else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, miss:1});
+  else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, choices:c.choices||null, miss:1});
 }
 function removeFromWrong(c){
   const key=c.key||(c.unitId+'|'+c.q);
@@ -365,16 +399,22 @@ function setTheme(u){
 }
 function home(){
   clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); saveDB();
-  const cards=UNITS.map(u=>{ const cl=unitDB(u.id).clears;
-    return `<button class="unit-card" style="background:linear-gradient(135deg,${u.c},${u.cd})" onclick="openUnit('${u.id}')">
-      ${cl>0?`<div class="clr">🏆 ${cl}회</div>`:''}
-      <div class="emoji">${u.emoji}</div>
-      <div><div class="uname">${u.name}</div><div class="usub">${u.sub}</div></div>
-    </button>`; }).join('');
+  const sections=SUBJECTS.map(s=>{
+    const us=UNITS.filter(u=>u.subj===s.id);
+    if(!us.length) return '';
+    const cards=us.map(u=>{ const cl=unitDB(u.id).clears;
+      return `<button class="unit-card" style="background:linear-gradient(135deg,${u.c},${u.cd})" onclick="openUnit('${u.id}')">
+        ${cl>0?`<div class="clr">🏆 ${cl}회</div>`:''}
+        <div class="emoji">${u.emoji}</div>
+        <div><div class="uname">${u.name}</div><div class="usub">${u.sub}</div></div>
+      </button>`; }).join('');
+    return `<div class="subj-head"><span>${s.emoji} ${s.name}</span><span class="line"></span></div>
+      <div class="unit-grid">${cards}</div>`;
+  }).join('');
   app.innerHTML=`
     <div class="home-head">
-      <div class="big">리원이 수학 놀이터 🧮</div>
-      <div class="sub">개념 → 그림게임 → 퀴즈 → 문제은행 → 복습·분석</div>
+      <div class="big">리원이 공부 놀이터 ✨</div>
+      <div class="sub">개념 → 게임 → 퀴즈 → 문제은행 → 복습·분석</div>
     </div>
     <div class="topwallet">
       <span class="wpill">🎟️ 스티커 ${DB.stickers}</span>
@@ -382,7 +422,7 @@ function home(){
       <span class="wpill">📚 ${DB.totalSolved}문제</span>
       <button class="wpill" onclick="toggleMute()" title="효과음 켜기/끄기">${DB.muted?'🔇':'🔊'}</button>
     </div>
-    <div class="unit-grid">${cards}</div>
+    ${sections}
     <div class="home-btns">
       <button onclick="renderDashboard()">📊 공부 기록</button>
       <button onclick="renderGallery()">🎴 카드 모음</button>
@@ -487,24 +527,26 @@ function renderCard(){
   } else {
     header=`<div class="quiz-top"><span class="score-pill">📘 복습</span><span class="score-pill">남은 ${P.queue.length+1}개</span><button class="stopbtn" onclick="stopPlay()">그만</button></div>`;
   }
+  const isC=!!c.choices;
   P.body.innerHTML=header+`
     <div class="q-card">
       ${c.retry?'<span class="q-retry">🔁 다시 도전!</span><br>':''}
       ${c.fromWrong?'<span class="q-retry">📘 복습 문제</span><br>':''}
       ${c.visual?`<div class="q-visual">${c.visual}</div>`:''}
       <div class="q-text">${c.q}</div>
-      <div class="ans-box empty" id="ans">?</div>
+      ${isC?`<div class="choice-grid">${c.choices.map((ch,i)=>`<button class="choice-btn" id="ch${i}" onclick="choosePick(${i})">${ch}</button>`).join('')}</div>`
+           :`<div class="ans-box empty" id="ans">?</div>`}
       <div class="feedback" id="fb"></div>
       <div class="hintbox" id="hint">💡 ${c.hint}</div>
     </div>
     <div id="play-controls">
       ${(P.mode==='bank'||P.mode==='review')?`<button class="bigbtn ghost" style="margin-top:10px" onclick="openHelp()">🙋 도와주세요 — 차근차근 알려줄게</button>`:''}
-      <div class="keypad">
+      ${isC?'':`<div class="keypad">
         ${[1,2,3,4,5,6,7,8,9].map(d=>`<button class="key" onclick="press('${d}')">${d}</button>`).join('')}
         <button class="key del" onclick="press('del')">⌫</button>
         <button class="key" onclick="press('0')">0</button>
         <button class="key ok" onclick="press('ok')">확인</button>
-      </div>
+      </div>`}
     </div>`;
 }
 function press(k){
@@ -514,13 +556,21 @@ function press(k){
   else if(P.buf.length<5) P.buf+=k;
   if(ans){ ans.textContent=P.buf===''?'?':P.buf; ans.classList.toggle('empty',P.buf===''); }
 }
+function ansShow(c){ return c.choices ? '"'+c.choices[c.a]+'"' : c.a; }
+function choosePick(i){
+  const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.awaitNext)return;
+  P.buf=String(i); submit();
+}
 function submit(){
   const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   markStat(P.unitId,c.cat,ok);
+  const ansEl=$('#ans');
+  if(c.choices){ c.choices.forEach((_,i)=>{ const b=$('#ch'+i); if(!b)return; b.disabled=true;
+    if(i===c.a) b.classList.add('correct'); else if(i===val&&!ok) b.classList.add('wrongpick'); }); }
   if(ok){
     P.locked=true; P.streak++; P.corr++; confetti(false); sfx('ok');
-    fb.className='feedback ok'; fb.textContent='정답이에요! 🎉'; $('#ans').style.borderColor='#19a974';
+    fb.className='feedback ok'; fb.textContent='정답이에요! 🎉'; if(ansEl)ansEl.style.borderColor='#19a974';
     if(P.mode==='master'){ P.solved.add(c.id); P.score+=c.retry?3:5; }
     else if(P.mode==='bank'){ P.score+=10; P.count++; }
     else { removeFromWrong(c); P.score+=5; P.fixed++; }
@@ -533,7 +583,7 @@ function submit(){
     later(advance,1000);
   } else {
     P.locked=true; P.awaitNext=true; P.streak=0; sfx('no');
-    fb.className='feedback no'; fb.textContent='앗! 정답은 '+c.a+' 예요. 왜 그런지 천천히 살펴보자 👀'; $('#ans').style.borderColor='#e8503a';
+    fb.className='feedback no'; fb.textContent='앗! 정답은 '+ansShow(c)+' 예요. 왜 그런지 천천히 살펴보자 👀'; if(ansEl)ansEl.style.borderColor='#e8503a';
     $('#hint').classList.add('show');
     if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); }
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
@@ -555,6 +605,7 @@ document.addEventListener('keydown',e=>{
   }
   if(!PLAY.cur)return;
   if(PLAY.awaitNext){ if(e.key==='Enter'){ e.preventDefault(); advance(); } return; }
+  if(PLAY.cur.choices){ const n=parseInt(e.key,10); if(n>=1&&n<=PLAY.cur.choices.length) choosePick(n-1); return; }
   if(e.key>='0'&&e.key<='9') press(e.key);
   else if(e.key==='Backspace'){ e.preventDefault(); press('del'); }
   else if(e.key==='Enter'){ e.preventDefault(); press('ok'); }
@@ -897,7 +948,7 @@ const TUTOR={
 };
 function tutorBeats(q){
   if(q.t && TUTOR[q.t.k]) return TUTOR[q.t.k](q.t,q);
-  return [{type:'say',text:`천천히 힌트를 같이 보자. 💡 ${q.hint}`},{type:'done',text:`정답은 <b>${q.a}</b>! 이제 직접 입력해보자 ✏️`,a:q.a}];
+  return [{type:'say',text:`천천히 힌트를 같이 보자. 💡 ${q.hint}`},{type:'done',text:`정답은 <b>${q.choices?q.choices[q.a]:q.a}</b>! 이제 직접 ${q.choices?'골라보자':'입력해보자'} ✏️`,a:q.a}];
 }
 function openHelp(){
   const P=PLAY; if(!P||!P.cur||(P.locked&&!P.awaitNext)) return;
@@ -1332,6 +1383,481 @@ function csStep(d){ const s=window._cs; s.g=Math.max(0,Math.min(3000,s.g+d)); dr
 function drawCs(){ const {g}=window._cs; const tilt=(g/3000)*16-8;
   $('#cs-beam').style.transform=`rotate(${tilt}deg)`;
   $('#cs-read').innerHTML=`${g} g ${g>0&&g%1000===0?`= <b>${g/1000}kg</b>`:''}`; }
+
+/* =========================================================
+   객관식 공통 도우미 + 짝맞추기 게임
+   ========================================================= */
+function poolGen(cat, pool){
+  return {cat, make(){
+    const it=pick(pool);
+    const wrong=shuffle(it.w).slice(0,3);
+    const choices=shuffle([it.c].concat(wrong));
+    return {q:it.q, choices, a:choices.indexOf(it.c), hint:it.h};
+  }};
+}
+function matchGame(pairsAll, tip){
+  return function(host){ window._mtData={pairsAll, tip, host}; mtReset(); };
+}
+function mtReset(){
+  const {pairsAll, tip, host}=window._mtData;
+  const pairs=shuffle(pairsAll).slice(0,6);
+  const cards=shuffle(pairs.flatMap((p,i)=>[{t:p[0],k:i},{t:p[1],k:i}]));
+  window._mt={cards, sel:-1, done:new Set(), lock:false};
+  host.innerHTML=`<div class="card">
+    <p class="cg-tip">${tip}</p>
+    <div class="match-grid">${cards.map((c,i)=>`<button class="match-card" id="mc${i}" onclick="mtTap(${i})">${c.t}</button>`).join('')}</div>
+    <p style="text-align:center;font-weight:800;margin:12px 0 0" id="mt-msg">짝이 되는 카드 두 장을 눌러봐!</p>
+    <button class="bigbtn ghost" style="margin-top:12px" onclick="mtReset()">🔀 다시 섞기</button>
+  </div>`;
+}
+function mtTap(i){
+  const M=window._mt; if(!M||M.lock||M.done.has(i))return;
+  const el=document.getElementById('mc'+i); if(!el)return;
+  if(M.sel===i){ el.classList.remove('sel'); M.sel=-1; return; }
+  el.classList.add('sel');
+  if(M.sel<0){ M.sel=i; return; }
+  const j=M.sel; M.sel=-1;
+  if(M.cards[i].k===M.cards[j].k){
+    M.done.add(i); M.done.add(j); sfx('ok');
+    [i,j].forEach(x=>{const e=document.getElementById('mc'+x); e.classList.remove('sel'); e.classList.add('done');});
+    if(M.done.size===M.cards.length){ confetti(false); sfx('win'); const m=document.getElementById('mt-msg'); if(m)m.textContent='다 찾았다! 🎉 다시 섞어서 또 해봐!'; }
+  } else {
+    M.lock=true; sfx('no');
+    setTimeout(()=>{ [i,j].forEach(x=>{const e=document.getElementById('mc'+x); if(e)e.classList.remove('sel');}); M.lock=false; },650);
+  }
+}
+
+/* =========================================================
+   📖 국어
+   ========================================================= */
+MODULES.kor1={
+  concept(){ return `
+    <div class="card"><span class="method-tag">비법 1 · 되/돼는 "되어"로 바꿔보기</span>
+      <h3>✏️ "되어"를 넣어 말이 되면 "돼"!</h3>
+      <p>"가도 <b>돼</b>?" → "가도 <b>되어</b>?" 말이 되죠? 그럼 <span class="hl">돼</span>!</p>
+      <p>"의사가 <b>되</b>고 싶어" → "되어고 싶어"는 이상하죠? 그럼 <span class="hl">되</span>!</p>
+      <div class="formula" style="font-size:16px">되어 = 돼 &nbsp;·&nbsp; "되어" 넣어보기 마법!</div></div>
+    <div class="card"><span class="method-tag">비법 2 · 안/않 구별</span>
+      <h3>🙅 "안"은 따로, "않"은 붙여서</h3>
+      <p><b>안</b>: "숙제를 <span class="hl">안</span> 했다" — 뒷말과 띄어 써요 (아니의 준말)</p>
+      <p><b>않</b>: "옳지 <span class="hl">않</span>다" — "-지 않다"처럼 붙어 다녀요</p></div>
+    <div class="card"><span class="method-tag">비법 3 · 뜻이 다른 쌍둥이 낱말</span>
+      <h3>👯 닮았지만 달라요</h3>
+      <p>📚 지식은 <b>가르치다</b> / 👉 방향은 <b>가리키다</b></p>
+      <p>🆚 같지 않으면 <b>다르다</b> / ❌ 답이 잘못되면 <b>틀리다</b></p>
+      <p>🎒 물건은 <b>잃어버리다</b> / 🧠 기억은 <b>잊어버리다</b></p>
+      <div class="tipbox"><b>꿀팁</b> 며칠(○) 몇일(×) · 깨끗이(○) · 역할(○) · 찌개(○) · 떡볶이(○)</div></div>`;
+  },
+  games:[{name:'🃏 낱말 짝맞추기', build:matchGame([
+    ['가르치다','지식을 알려 주다'],['가리키다','방향을 알리다'],['다르다','서로 같지 않다'],['틀리다','답이 맞지 않다'],
+    ['잃어버리다','물건이 없어지다'],['잊어버리다','기억이 안 나다'],['작다','크기가 안 크다'],['적다','양이 안 많다']
+  ],'🍀 뜻이 맞는 짝을 찾아요!')}],
+  gens:[
+    poolGen('바른 글자',[
+      {q:'친구를 정말 (___)에 만났어!', c:'오랜만', w:['오랫만','오랜맏','올해만'], h:'"오래간만"을 줄인 말이라 오랜만!'},
+      {q:'(___) 동안 여행을 다녀왔어요.', c:'며칠', w:['몇일','몇 일','메칠'], h:'"몇일"은 없는 말! 언제나 며칠.'},
+      {q:'방을 (___) 청소했어요.', c:'깨끗이', w:['깨끗히','깨끄시','깨끋이'], h:'깨끗"이"가 맞아요.'},
+      {q:'(___) 생각해 보고 대답했어요.', c:'곰곰이', w:['곰곰히','곰고미','곰곰니'], h:'곰곰"이"!'},
+      {q:'연극에서 내가 맡은 (___)은 토끼야.', c:'역할', w:['역활','녁할','역깔'], h:'역할이 바른 표기!'},
+      {q:'보글보글 김치(___)가 끓어요.', c:'찌개', w:['찌게','찌깨','지게'], h:'찌개! "개"로 끝나요.'},
+      {q:'학교 앞에서 (___)를 사 먹었어요.', c:'떡볶이', w:['떡복이','떡뽁기','떡볶기'], h:'떡+볶이(볶다)=떡볶이!'},
+      {q:'(___)이야? 이 시간에 어쩐 일이야?', c:'웬일', w:['왠일','웬닐','왼일'], h:'"어찌 된 일"은 웬일!'},
+      {q:'소문이 (___) 퍼졌다.', c:'금세', w:['금새','금쇄','검세'], h:'"금시에"의 준말이라 금세!'},
+    ]),
+    poolGen('안/않·되/돼',[
+      {q:'이제 집에 가도 (___)?', c:'돼', w:['되','됀','됌'], h:'"가도 되어?"가 되니까 돼!'},
+      {q:'복도에서 뛰면 안 (___)요.', c:'돼', w:['되','됀','대'], h:'안 되어요 → 안 돼요!'},
+      {q:'오늘 숙제를 (___) 했어요.', c:'안', w:['않','앉','얀'], h:'"아니"의 준말 "안"은 띄어 써요!'},
+      {q:'그 말은 옳지 (___)아요.', c:'않', w:['안','앉','얺'], h:'"-지 않다"는 붙여 쓰는 않!'},
+      {q:'커서 의사가 (___)고 싶어요.', c:'되', w:['돼','됐','대'], h:'"되어고"는 이상하죠? 그럼 되!'},
+      {q:'장난치면 (___) 돼!', c:'안', w:['않','앉','얀'], h:'"안 돼"는 안+돼, 따로따로!'},
+      {q:'형이 벌써 중학생이 (___)어요.', c:'되', w:['돼','됏','대'], h:'되+었어요. "돼었어요"는 없어요!'},
+    ]),
+    poolGen('헷갈리는 낱말',[
+      {q:'선생님께서 수학을 (___).', c:'가르쳐요', w:['가리켜요','가르켜요','갈켜요'], h:'지식은 가르치다!'},
+      {q:'시곗바늘이 3시를 (___).', c:'가리켜요', w:['가르쳐요','가리치네','갈쳐요'], h:'방향·위치는 가리키다!'},
+      {q:'내 생각은 네 생각과 (___).', c:'달라', w:['틀려','달려','틀라'], h:'같지 않으면 다르다!'},
+      {q:'2+3=6은 답이 (___).', c:'틀려', w:['달라','다러','달려'], h:'정답이 아니면 틀리다!'},
+      {q:'아끼던 우산을 (___).', c:'잃어버렸어', w:['잊어버렸어','일어버렸어','읽어버렸어'], h:'물건은 잃어버리다!'},
+      {q:'친구와 한 약속을 깜빡 (___).', c:'잊어버렸어', w:['잃어버렸어','이저버렸어','입어버렸어'], h:'기억은 잊어버리다!'},
+      {q:'동생은 나보다 키가 (___).', c:'작아', w:['적어','잭아','쟉아'], h:'크기는 작다, 양은 적다!'},
+      {q:'내 반찬이 너무 (___).', c:'적어', w:['작아','젹어','잔아'], h:'양·개수는 적다!'},
+    ]),
+  ]
+};
+MODULES.kor2={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 반대말</span>
+      <h3>🔄 뜻이 정반대인 낱말 짝꿍</h3>
+      <p>크다↔작다 · 높다↔낮다 · 길다↔짧다 · 무겁다↔가볍다</p>
+      <div class="formula" style="font-size:16px">반대말을 알면 낱말 실력이 2배!</div></div>
+    <div class="card"><span class="method-tag">개념 2 · 비슷한말</span>
+      <h3>🤝 뜻이 거의 같은 낱말 친구</h3>
+      <p>아름답다≈예쁘다 · 기쁘다≈즐겁다 · 매우≈아주 · 모두≈전부</p>
+      <p>비슷한말을 알면 글쓰기가 <span class="hl">훨씬 풍성</span>해져요!</p></div>
+    <div class="card"><span class="method-tag">개념 3 · 흉내 내는 말</span>
+      <h3>🐶 소리와 모양을 흉내!</h3>
+      <p>소리 흉내: 멍멍, 삐악삐악, 주룩주룩 (의성어)</p>
+      <p>모양 흉내: 깡충깡충, 반짝반짝, 엉금엉금 (의태어)</p></div>`;
+  },
+  games:[{name:'🃏 반대말 짝맞추기', build:matchGame([
+    ['크다','작다'],['높다','낮다'],['길다','짧다'],['무겁다','가볍다'],
+    ['빠르다','느리다'],['밝다','어둡다'],['덥다','춥다'],['열다','닫다']
+  ],'🔄 반대말 짝을 찾아요!')}],
+  gens:[
+    poolGen('반대말',[
+      {q:'"크다"의 반대말은?', c:'작다', w:['낮다','짧다','어둡다'], h:'크기의 반대를 생각해요!'},
+      {q:'"높다"의 반대말은?', c:'낮다', w:['작다','멀다','느리다'], h:'산은 높고, 언덕은?'},
+      {q:'"길다"의 반대말은?', c:'짧다', w:['가늘다','작다','좁다'], h:'기차는 길고, 버스는?'},
+      {q:'"무겁다"의 반대말은?', c:'가볍다', w:['작다','얇다','부드럽다'], h:'바위는 무겁고, 깃털은?'},
+      {q:'"빠르다"의 반대말은?', c:'느리다', w:['짧다','약하다','조용하다'], h:'토끼는 빠르고, 거북이는?'},
+      {q:'"밝다"의 반대말은?', c:'어둡다', w:['하얗다','흐리다','검다'], h:'낮은 밝고, 밤은?'},
+      {q:'"열다"의 반대말은?', c:'닫다', w:['밀다','잠그다','두드리다'], h:'문을 열고... 다시?'},
+      {q:'"가깝다"의 반대말은?', c:'멀다', w:['넓다','크다','길다'], h:'거리의 반대!'},
+      {q:'"시작"의 반대말은?', c:'끝', w:['중간','처음','계속'], h:'달리기의 출발과...?'},
+    ]),
+    poolGen('비슷한말',[
+      {q:'"아름답다"와 비슷한 말은?', c:'예쁘다', w:['밉다','크다','어둡다'], h:'꽃을 보고 하는 말!'},
+      {q:'"기쁘다"와 비슷한 말은?', c:'즐겁다', w:['슬프다','무섭다','졸리다'], h:'생일날 기분!'},
+      {q:'"무섭다"와 비슷한 말은?', c:'두렵다', w:['신나다','반갑다','시원하다'], h:'무서울 때 드는 마음!'},
+      {q:'"모두"와 비슷한 말은?', c:'전부', w:['조금','하나','가끔'], h:'남김없이 다!'},
+      {q:'"매우"와 비슷한 말은?', c:'아주', w:['조금','거의','별로'], h:'"매우 크다 = ___ 크다"'},
+      {q:'"조용하다"와 비슷한 말은?', c:'고요하다', w:['시끄럽다','복잡하다','바쁘다'], h:'밤의 호수처럼!'},
+      {q:'"빛나다"와 비슷한 말은?', c:'반짝이다', w:['어두워지다','사라지다','녹다'], h:'별이 하는 일!'},
+    ]),
+    poolGen('흉내 내는 말',[
+      {q:'강아지가 짖는 소리는?', c:'멍멍', w:['삐악삐악','음매','꿀꿀'], h:'강아지 소리!'},
+      {q:'병아리 울음소리는?', c:'삐악삐악', w:['멍멍','야옹','개굴개굴'], h:'노란 아기 새!'},
+      {q:'비가 세차게 오는 소리는?', c:'주룩주룩', w:['솔솔','쨍쨍','살랑살랑'], h:'장마철 빗소리!'},
+      {q:'토끼가 뛰는 모양은?', c:'깡충깡충', w:['엉금엉금','뒤뚱뒤뚱','스르륵'], h:'토끼처럼!'},
+      {q:'별이 빛나는 모양은?', c:'반짝반짝', w:['주룩주룩','펄럭펄럭','데굴데굴'], h:'밤하늘의 별!'},
+      {q:'거북이가 걷는 모양은?', c:'엉금엉금', w:['깡충깡충','휙휙','씽씽'], h:'아주 느리게!'},
+      {q:'함박눈이 내리는 모양은?', c:'펑펑', w:['쨍쨍','졸졸','우르릉'], h:'겨울에 눈이!'},
+    ]),
+  ]
+};
+MODULES.kor3={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 높임 낱말</span>
+      <h3>🙇 어른께는 특별한 낱말을!</h3>
+      <p>밥→<b>진지</b> · 집→<b>댁</b> · 말→<b>말씀</b> · 나이→<b>연세</b> · 생일→<b>생신</b></p>
+      <p>먹다→<b>드시다</b> · 자다→<b>주무시다</b> · 있다→<b>계시다</b> · 주다→<b>드리다</b></p></div>
+    <div class="card"><span class="method-tag">개념 2 · -시- 넣기</span>
+      <h3>✨ 높임의 "시"</h3>
+      <p>할머니가 왔다(×) → 할머니<b>께서</b> 오<b>셨</b>다(○)</p>
+      <p>"-께서"와 "-시-"를 넣으면 높임 표현 완성!</p>
+      <div class="tipbox"><b>기억!</b> 높임말은 할아버지·할머니·부모님·선생님 같은 어른께 써요.</div></div>`;
+  },
+  games:[{name:'🃏 높임말 짝맞추기', build:matchGame([
+    ['밥','진지'],['집','댁'],['말','말씀'],['나이','연세'],
+    ['생일','생신'],['자다','주무시다'],['먹다','드시다'],['있다','계시다']
+  ],'🙇 보통말과 높임말 짝을 찾아요!')}],
+  gens:[
+    poolGen('높임 낱말',[
+      {q:'"밥"의 높임말은?', c:'진지', w:['식사','먹이','밥상'], h:'할머니, ___ 잡수세요!'},
+      {q:'"집"의 높임말은?', c:'댁', w:['주택','방','마을'], h:'선생님 ___에 다녀왔어요.'},
+      {q:'"말"의 높임말은?', c:'말씀', w:['이야기','소리','대화'], h:'선생님 ___을 잘 들어요.'},
+      {q:'"나이"의 높임말은?', c:'연세', w:['생일','키','학년'], h:'할아버지 ___가 어떻게 되세요?'},
+      {q:'"생일"의 높임말은?', c:'생신', w:['잔치','축하','명절'], h:'할머니 ___ 축하드려요!'},
+      {q:'"먹다"의 높임말은?', c:'드시다', w:['먹으시다','삼키다','씹다'], h:'할아버지께서 진지를 ___.'},
+      {q:'"자다"의 높임말은?', c:'주무시다', w:['눕다','쉬다','조시다'], h:'안녕히 ___!'},
+      {q:'"있다"의 높임말은?', c:'계시다', w:['있으시다','산다','머물다'], h:'선생님께서 교실에 ___.'},
+    ]),
+    poolGen('높임 문장',[
+      {q:'할머니께서 우리 집에 (___).', c:'오셨다', w:['왔다','온다','왔어'], h:'어른께는 -시-를 넣어요!'},
+      {q:'선생님께 궁금한 것을 (___).', c:'여쭤봤다', w:['물어봤다','말했다','떠들었다'], h:'어른께 묻는 건 여쭤보다!'},
+      {q:'할아버지께서 진지를 (___).', c:'잡수신다', w:['먹는다','먹고 있다','삼킨다'], h:'먹다의 높임말!'},
+      {q:'부모님께 감사 선물을 (___).', c:'드렸다', w:['줬다','던졌다','보냈다'], h:'어른께 주는 건 드리다!'},
+      {q:'선생님께서 교실에 (___).', c:'계신다', w:['있다','산다','놀고 있다'], h:'있다의 높임말!'},
+      {q:'할머니께서 안방에서 (___).', c:'주무신다', w:['잔다','눕는다','쉰다'], h:'자다의 높임말!'},
+    ]),
+    poolGen('높임 예절',[
+      {q:'높임말을 써야 하는 분은?', c:'할아버지', w:['짝꿍','동생','아기'], h:'어른께 높임말!'},
+      {q:'어른께 물건을 드릴 때는?', c:'두 손으로 드려요', w:['한 손으로 줘요','던져 줘요','책상에 놓고 가요'], h:'공손하게 두 손!'},
+      {q:'아침에 부모님께 하는 바른 인사는?', c:'안녕히 주무셨어요?', w:['잘 잤어?','굿모닝~','일어났네?'], h:'어른께는 높임 인사!'},
+      {q:'"안녕히 주무세요"는 언제 하는 인사?', c:'주무시기 전에', w:['밥 먹을 때','학교 갈 때','놀이터에서'], h:'잠자리 인사!'},
+      {q:'친구에게 "줬다"면, 할머니께는?', c:'드렸다', w:['줬다','주셨다','받았다'], h:'내가 어른께 → 드리다!'},
+      {q:'할머니께서 나에게 용돈을 (___).', c:'주셨다', w:['드렸다','줬다','바쳤다'], h:'어른이 나에게 → 주셨다!'},
+    ]),
+  ]
+};
+
+/* =========================================================
+   🔤 영어
+   ========================================================= */
+MODULES.eng1={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 알파벳 26글자</span>
+      <h3>🔤 대문자와 소문자</h3>
+      <p>알파벳은 모두 <span class="hl">26글자</span>! 큰 글자(대문자)와 작은 글자(소문자)가 짝이에요.</p>
+      <div class="formula" style="font-size:15px">A a · B b · C c · D d · E e · F f · G g ...</div>
+      <div class="tipbox"><b>조심!</b> b와 d, p와 q는 거울처럼 닮았어요. b는 배가 오른쪽! d는 배가 왼쪽!</div></div>
+    <div class="card"><span class="method-tag">개념 2 · 첫소리 연결</span>
+      <h3>🍎 단어의 첫 글자 소리</h3>
+      <p>Apple(애플)은 <b>A</b>, Dog(도그)는 <b>D</b>, Cat(캣)은 <b>C</b>로 시작!</p>
+      <p>소리를 들으면 첫 글자를 맞힐 수 있어요.</p></div>`;
+  },
+  games:[{name:'🃏 대문자·소문자 짝', build:matchGame([
+    ['A','a'],['B','b'],['D','d'],['E','e'],['G','g'],['Q','q'],['R','r'],['N','n']
+  ],'🔤 대문자와 소문자 짝을 찾아요!')}],
+  gens:[
+    poolGen('소문자 찾기',[
+      {q:'대문자 <b>B</b>의 소문자는?', c:'b', w:['d','p','q'], h:'b는 막대기 다음 배가 오른쪽!'},
+      {q:'대문자 <b>D</b>의 소문자는?', c:'d', w:['b','p','g'], h:'d는 배가 왼쪽!'},
+      {q:'대문자 <b>G</b>의 소문자는?', c:'g', w:['j','q','y'], h:'g는 꼬리가 동그랗게!'},
+      {q:'대문자 <b>E</b>의 소문자는?', c:'e', w:['a','c','o'], h:'e!'},
+      {q:'대문자 <b>R</b>의 소문자는?', c:'r', w:['n','k','v'], h:'r!'},
+      {q:'대문자 <b>Q</b>의 소문자는?', c:'q', w:['p','g','b'], h:'q는 배가 왼쪽, 꼬리 아래로!'},
+      {q:'대문자 <b>N</b>의 소문자는?', c:'n', w:['m','h','u'], h:'산이 한 개면 n, 두 개면 m!'},
+      {q:'대문자 <b>A</b>의 소문자는?', c:'a', w:['e','o','u'], h:'a!'},
+    ]),
+    poolGen('알파벳 순서',[
+      {q:'A → B → C → 다음은?', c:'D', w:['E','F','G'], h:'에이 비 씨 디!'},
+      {q:'F 바로 다음 알파벳은?', c:'G', w:['E','H','J'], h:'이 에프 지!'},
+      {q:'L → M → N → 다음은?', c:'O', w:['P','Q','K'], h:'엘 엠 엔 오!'},
+      {q:'알파벳의 첫 글자는?', c:'A', w:['Z','B','C'], h:'시작은 언제나!'},
+      {q:'알파벳의 마지막 글자는?', c:'Z', w:['Y','X','W'], h:'끝은 지!'},
+      {q:'H 바로 앞 알파벳은?', c:'G', w:['I','F','J'], h:'지 에이치!'},
+      {q:'S → T → U → 다음은?', c:'V', w:['W','X','R'], h:'에스 티 유 브이!'},
+    ]),
+    poolGen('첫 글자 소리',[
+      {q:'🍎 apple(애플)의 첫 글자는?', c:'A', w:['E','O','U'], h:'애~ 소리는 A!'},
+      {q:'🐶 dog(도그)의 첫 글자는?', c:'D', w:['B','G','O'], h:'드~ 소리는 D!'},
+      {q:'🐱 cat(캣)의 첫 글자는?', c:'C', w:['K','S','T'], h:'크~ 소리, cat은 C!'},
+      {q:'☀️ sun(썬)의 첫 글자는?', c:'S', w:['C','Z','N'], h:'스~ 소리는 S!'},
+      {q:'🍌 banana(버내너)의 첫 글자는?', c:'B', w:['D','P','N'], h:'브~ 소리는 B!'},
+      {q:'🌙 moon(문)의 첫 글자는?', c:'M', w:['N','W','U'], h:'음~ 소리는 M!'},
+      {q:'🐷 pig(피그)의 첫 글자는?', c:'P', w:['B','Q','G'], h:'프~ 소리는 P!'},
+    ]),
+  ]
+};
+MODULES.eng2={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 동물 단어</span>
+      <h3>🦁 영어로 동물 부르기</h3>
+      <p>dog 개 · cat 고양이 · lion 사자 · bear 곰 · bird 새 · fish 물고기 · rabbit 토끼</p></div>
+    <div class="card"><span class="method-tag">개념 2 · 색깔과 숫자</span>
+      <h3>🌈 색깔 + 숫자</h3>
+      <p>red 빨강 · blue 파랑 · yellow 노랑 · green 초록 · black 검정 · white 하양</p>
+      <p>one 1 · two 2 · three 3 · four 4 · five 5 ... ten 10</p></div>
+    <div class="card"><span class="method-tag">개념 3 · 인사 표현</span>
+      <h3>👋 매일 쓰는 인사</h3>
+      <p>Hello! 안녕! · Good morning! 좋은 아침! · Thank you! 고마워요!</p>
+      <p>Sorry! 미안해요! · Good night! 잘 자요!</p></div>`;
+  },
+  games:[{name:'🃏 단어 짝맞추기', build:matchGame([
+    ['dog','개'],['cat','고양이'],['lion','사자'],['bear','곰'],
+    ['red','빨강'],['blue','파랑'],['three','3'],['ten','10']
+  ],'🔤 영어 단어와 뜻을 짝지어요!')}],
+  gens:[
+    poolGen('동물 단어',[
+      {q:'<b>dog</b>의 뜻은?', c:'개', w:['고양이','곰','새'], h:'멍멍!'},
+      {q:'<b>cat</b>의 뜻은?', c:'고양이', w:['개','토끼','사자'], h:'야옹!'},
+      {q:'<b>lion</b>의 뜻은?', c:'사자', w:['호랑이','곰','코끼리'], h:'동물의 왕!'},
+      {q:'<b>bear</b>의 뜻은?', c:'곰', w:['새','여우','늑대'], h:'꿀을 좋아해요!'},
+      {q:'<b>bird</b>의 뜻은?', c:'새', w:['물고기','벌','나비'], h:'하늘을 날아요!'},
+      {q:'<b>fish</b>의 뜻은?', c:'물고기', w:['개구리','거북','오리'], h:'물에서 살아요!'},
+      {q:'<b>rabbit</b>의 뜻은?', c:'토끼', w:['쥐','다람쥐','고슴도치'], h:'깡충깡충!'},
+      {q:'"호랑이"는 영어로?', c:'tiger', w:['lion','bear','monkey'], h:'타이거!'},
+    ]),
+    poolGen('색깔·숫자',[
+      {q:'<b>red</b>는 무슨 색?', c:'빨간색', w:['파란색','노란색','초록색'], h:'사과·딸기 색!'},
+      {q:'<b>blue</b>는 무슨 색?', c:'파란색', w:['빨간색','검은색','분홍색'], h:'하늘·바다 색!'},
+      {q:'<b>yellow</b>는 무슨 색?', c:'노란색', w:['초록색','보라색','하얀색'], h:'바나나 색!'},
+      {q:'<b>green</b>은 무슨 색?', c:'초록색', w:['노란색','파란색','갈색'], h:'나뭇잎 색!'},
+      {q:'<b>white</b>는 무슨 색?', c:'하얀색', w:['검은색','회색','하늘색'], h:'눈(snow) 색!'},
+      {q:'<b>three</b>는 숫자 몇?', c:'3', w:['2','5','8'], h:'원 투 쓰리!'},
+      {q:'<b>five</b>는 숫자 몇?', c:'5', w:['4','9','7'], h:'손가락 한 손!'},
+      {q:'<b>ten</b>은 숫자 몇?', c:'10', w:['6','8','100'], h:'두 손 손가락 모두!'},
+    ]),
+    poolGen('인사 표현',[
+      {q:'아침 인사! "Good (___)!"', c:'morning', w:['night','bye','apple'], h:'모닝은 아침!'},
+      {q:'<b>Thank you!</b>의 뜻은?', c:'고마워요', w:['미안해요','안녕하세요','배고파요'], h:'고마울 때!'},
+      {q:'"<b>I am sorry</b>"의 뜻은?', c:'미안해요', w:['고마워요','반가워요','졸려요'], h:'사과할 때!'},
+      {q:'<b>Good night!</b>은 언제 하는 인사?', c:'잠자기 전에', w:['밥 먹을 때','아침에','학교에서'], h:'나이트는 밤!'},
+      {q:'<b>Hello!</b>의 뜻은?', c:'안녕!', w:['잘 가!','고마워!','미안해!'], h:'만났을 때 인사!'},
+      {q:'친구와 헤어질 때 하는 말은?', c:'Goodbye!', w:['Good morning!','Thank you!','Sorry!'], h:'바이바이~'},
+    ]),
+  ]
+};
+
+/* =========================================================
+   🔬 과학
+   ========================================================= */
+MODULES.sci1={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 자석에 붙는 것</span>
+      <h3>🧲 자석은 "철"을 좋아해요</h3>
+      <p>철 클립·쇠못·철 가위날은 <span class="hl">착!</span> 붙어요.</p>
+      <p>유리·플라스틱·종이·고무·나무는 <span class="hl">안 붙어요</span>.</p></div>
+    <div class="card"><span class="method-tag">개념 2 · 극의 비밀</span>
+      <h3>🔴🔵 N극과 S극</h3>
+      <p>같은 극끼리: <b>밀어내요</b> (N-N, S-S) · 다른 극끼리: <b>끌어당겨요</b> (N-S)</p>
+      <p>자석의 힘은 <span class="hl">양쪽 끝(극)</span>이 가장 세요!</p>
+      <div class="tipbox"><b>신기!</b> 나침반 바늘도 자석이라 N극이 항상 <b>북쪽</b>을 가리켜요.</div></div>`;
+  },
+  games:[{name:'🃏 자석 짝맞추기', build:matchGame([
+    ['같은 극','밀어내요'],['다른 극','끌어당겨요'],['N극','북쪽을 가리켜요'],
+    ['나침반','방향 찾는 도구'],['철','자석에 붙어요'],['플라스틱','자석에 안 붙어요']
+  ],'🧲 자석 상식 짝을 찾아요!')}],
+  gens:[
+    poolGen('붙을까 안 붙을까',[
+      {q:'자석에 붙는 것은?', c:'철 클립', w:['지우개','유리컵','나무젓가락'], h:'철로 된 것만 붙어요!'},
+      {q:'자석에 붙는 것은?', c:'쇠못', w:['플라스틱 자','색종이','고무줄'], h:'쇠=철!'},
+      {q:'자석에 붙는 것은?', c:'철 가위날', w:['연필','지우개','털실'], h:'가위의 날 부분은 철!'},
+      {q:'자석에 붙지 <b>않는</b> 것은?', c:'플라스틱 블록', w:['철 클립','쇠못','철사'], h:'플라스틱은 철이 아니에요!'},
+      {q:'자석에 붙지 <b>않는</b> 것은?', c:'유리구슬', w:['철 옷핀','쇠젓가락','철 못'], h:'유리는 안 붙어요!'},
+      {q:'자석에 붙지 <b>않는</b> 것은?', c:'고무공', w:['클립','바늘','철 숟가락'], h:'고무는 안 붙어요!'},
+    ]),
+    poolGen('자석의 성질',[
+      {q:'자석의 같은 극끼리 가까이 하면?', c:'서로 밀어내요', w:['서로 붙어요','색이 변해요','소리가 나요'], h:'N-N, S-S는 밀어내요!'},
+      {q:'자석의 다른 극끼리 가까이 하면?', c:'서로 끌어당겨요', w:['서로 밀어내요','녹아요','떨려요'], h:'N-S는 착!'},
+      {q:'나침반의 N극이 가리키는 방향은?', c:'북쪽', w:['남쪽','동쪽','서쪽'], h:'N은 North(북쪽)!'},
+      {q:'자석의 힘이 가장 센 곳은?', c:'양쪽 끝(극)', w:['한가운데','윗면','아무 데나 같아요'], h:'클립이 극에 주렁주렁!'},
+      {q:'나침반 바늘이 항상 같은 방향을 가리키는 까닭은?', c:'바늘이 자석이라서', w:['바람 때문에','무거워서','빛 때문에'], h:'바늘도 자석!'},
+      {q:'막대자석을 클립 더미에 넣으면 클립이 많이 붙는 곳은?', c:'양쪽 끝', w:['가운데','위쪽 면','아래쪽 면'], h:'극이 가장 힘세요!'},
+    ]),
+    poolGen('자석의 이용',[
+      {q:'자석을 이용한 물건이 <b>아닌</b> 것은?', c:'유리컵', w:['나침반','냉장고 자석','자석 필통'], h:'유리컵엔 자석이 없어요!'},
+      {q:'방향을 찾을 때 쓰는 도구는?', c:'나침반', w:['체중계','온도계','돋보기'], h:'N극이 북쪽을 알려줘요!'},
+      {q:'물에 빠진 클립을 자석으로 건질 수 있는 까닭은?', c:'클립이 철이라서', w:['클립이 가벼워서','물이 차가워서','클립이 작아서'], h:'철은 물속에서도 붙어요!'},
+      {q:'냉장고 문이 착 닫히는 비밀은?', c:'문에 자석이 있어서', w:['문이 무거워서','바람 때문에','전기 때문에'], h:'문 테두리에 자석이!'},
+      {q:'자석 낚시 장난감에서 물고기 입에 있는 것은?', c:'철(쇠) 조각', w:['유리 조각','솜','지우개'], h:'자석에 붙으려면 철!'},
+    ]),
+  ]
+};
+MODULES.sci2={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 배추흰나비 한살이</span>
+      <h3>🦋 알 → 애벌레 → 번데기 → 나비</h3>
+      <p>알에서 나온 <b>애벌레</b>는 허물을 벗으며 자라고, <b>번데기</b>가 되었다가 <b>나비(어른벌레)</b>로!</p>
+      <div class="formula" style="font-size:16px">알 → 애벌레 → 번데기 → 어른벌레</div></div>
+    <div class="card"><span class="method-tag">개념 2 · 알 vs 새끼</span>
+      <h3>🥚🐣 어떻게 태어날까?</h3>
+      <p><b>알을 낳는 동물</b>: 닭, 개구리, 나비, 연어, 거북</p>
+      <p><b>새끼를 낳는 동물</b>: 개, 고양이, 소, 말, 토끼</p>
+      <div class="tipbox"><b>신기!</b> 개구리는 알→올챙이→개구리! 올챙이는 뒷다리가 먼저 나와요.</div></div>`;
+  },
+  games:[{name:'🃏 동물 짝맞추기', build:matchGame([
+    ['개구리','올챙이'],['닭','병아리'],['나비','애벌레'],
+    ['소','송아지'],['말','망아지'],['개','강아지']
+  ],'🦋 어른 동물과 아기를 짝지어요!')}],
+  gens:[
+    poolGen('한살이 순서',[
+      {q:'배추흰나비: 알 → (___) → 번데기 → 나비', c:'애벌레', w:['올챙이','병아리','새끼 나비'], h:'알에서 꼬물꼬물 나오는 것!'},
+      {q:'애벌레 다음 단계는?', c:'번데기', w:['알','나비','애벌레2'], h:'움직이지 않고 변신 준비!'},
+      {q:'번데기에서 나오는 것은?', c:'어른벌레(나비)', w:['애벌레','알','올챙이'], h:'드디어 날개가!'},
+      {q:'개구리: 알 → (___) → 개구리', c:'올챙이', w:['애벌레','번데기','물고기'], h:'꼬리로 헤엄쳐요!'},
+      {q:'올챙이가 자랄 때 먼저 나오는 다리는?', c:'뒷다리', w:['앞다리','네 다리 동시에','날개'], h:'뒷다리가 쑥, 앞다리가 쑥!'},
+      {q:'닭: 알 → (___) → 닭', c:'병아리', w:['올챙이','애벌레','오리'], h:'삐악삐악!'},
+    ]),
+    poolGen('알vs새끼',[
+      {q:'알을 낳는 동물은?', c:'닭', w:['개','고양이','소'], h:'달걀을 생각해요!'},
+      {q:'알을 낳는 동물은?', c:'개구리', w:['토끼','말','돼지'], h:'물속에 알을 낳아요!'},
+      {q:'알을 낳는 동물은?', c:'배추흰나비', w:['강아지','송아지','망아지'], h:'배춧잎에 알을!'},
+      {q:'새끼를 낳는 동물은?', c:'고양이', w:['닭','개구리','잠자리'], h:'아기 고양이로 태어나요!'},
+      {q:'새끼를 낳는 동물은?', c:'소', w:['나비','연어','거북'], h:'송아지로 태어나요!'},
+      {q:'알을 낳는 동물은?', c:'거북', w:['개','토끼','고래'], h:'모래밭에 알을 낳아요!'},
+    ]),
+    poolGen('동물 상식',[
+      {q:'애벌레가 허물을 벗는 까닭은?', c:'몸이 자라서', w:['추워서','심심해서','날기 위해서'], h:'옷이 작아지면 갈아입듯!'},
+      {q:'번데기 단계가 <b>없는</b> 곤충은?', c:'잠자리', w:['배추흰나비','무당벌레','장수풍뎅이'], h:'잠자리는 애벌레에서 바로 어른!'},
+      {q:'알에서 나온 배추흰나비 애벌레가 처음 먹는 것은?', c:'자기 알껍데기', w:['배춧잎','꿀','이슬'], h:'신기하게도 껍데기부터!'},
+      {q:'병아리가 자라면?', c:'닭', w:['오리','참새','독수리'], h:'삐악삐악 → 꼬끼오!'},
+      {q:'올챙이가 다 자라면?', c:'개구리', w:['물고기','도롱뇽','두꺼비'], h:'개굴개굴!'},
+      {q:'나비의 날개는 몇 장?', c:'4장', w:['2장','6장','8장'], h:'위 2장 + 아래 2장!'},
+    ]),
+  ]
+};
+
+/* =========================================================
+   🏘️ 사회
+   ========================================================= */
+MODULES.soc1={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 교통수단의 변화</span>
+      <h3>🚗 옛날엔 가마, 오늘날엔 자동차</h3>
+      <p>옛날: 가마, 말, 나룻배, 돛단배 → 오늘날: 자동차, 기차, 비행기, 여객선</p>
+      <p>교통이 발달해 <span class="hl">먼 곳도 빠르게</span> 갈 수 있게 됐어요!</p></div>
+    <div class="card"><span class="method-tag">개념 2 · 통신수단의 변화</span>
+      <h3>📱 봉수에서 휴대전화까지</h3>
+      <p>옛날: <b>봉수</b>(산꼭대기 불·연기 신호), <b>파발</b>(말 타고 소식 전달), 서찰(편지)</p>
+      <p>오늘날: 휴대전화, 전자우편, 영상통화</p></div>
+    <div class="card"><span class="method-tag">개념 3 · 생활 도구의 변화</span>
+      <h3>🍚 가마솥 → 전기밥솥</h3>
+      <p>빨래판→세탁기 · 호롱불→전등 · 부채→선풍기 · 절구→믹서</p>
+      <div class="tipbox"><b>생각!</b> 도구가 달라져도 "밥 짓기, 빨래하기" 같은 할 일은 똑같아요. 더 편해졌을 뿐!</div></div>`;
+  },
+  games:[{name:'🃏 옛날↔오늘날 짝', build:matchGame([
+    ['가마솥','전기밥솥'],['빨래판','세탁기'],['호롱불','전등'],
+    ['부채','선풍기'],['붓','연필·볼펜'],['봉수','휴대전화']
+  ],'🏺 옛날 도구와 오늘날 도구를 짝지어요!')}],
+  gens:[
+    poolGen('교통수단',[
+      {q:'옛날 사람들이 타던 것이 <b>아닌</b> 것은?', c:'지하철', w:['가마','말','돛단배'], h:'지하철은 오늘날의 것!'},
+      {q:'옛날에 강을 건널 때 탄 것은?', c:'나룻배', w:['여객선','잠수함','요트'], h:'사공이 노를 젓는 배!'},
+      {q:'오늘날 하늘을 나는 교통수단은?', c:'비행기', w:['가마','말','뗏목'], h:'하늘을 나는 것!'},
+      {q:'교통수단이 발달해서 좋아진 점은?', c:'먼 곳을 빨리 갈 수 있어요', w:['길이 없어졌어요','여행이 더 힘들어요','걸어만 다녀요'], h:'빠르고 편해졌어요!'},
+      {q:'옛날에 신분이 높은 사람이 타던, 사람이 메는 것은?', c:'가마', w:['자전거','버스','수레바퀴'], h:'앞뒤에서 사람이 들어요!'},
+      {q:'바다 건너 다른 나라에 갈 때 타는 것 두 가지는?', c:'비행기와 배', w:['기차와 버스','자전거와 말','가마와 수레'], h:'바다를 건너려면!'},
+    ]),
+    poolGen('통신수단',[
+      {q:'옛날에 산꼭대기에서 불과 연기로 소식을 전한 것은?', c:'봉수', w:['전화','텔레비전','라디오'], h:'낮엔 연기, 밤엔 불!'},
+      {q:'옛날에 말을 타고 급한 소식을 전한 제도는?', c:'파발', w:['택배','버스','신문'], h:'말을 갈아타며 달려요!'},
+      {q:'오늘날의 통신수단이 <b>아닌</b> 것은?', c:'서찰(옛날 편지)', w:['휴대전화','전자우편','영상통화'], h:'서찰은 옛날 것!'},
+      {q:'멀리 있는 가족 얼굴을 보며 이야기하는 방법은?', c:'영상통화', w:['봉수','파발','서찰'], h:'화면으로 얼굴을 봐요!'},
+      {q:'통신수단이 발달해서 좋아진 점은?', c:'소식을 바로 전할 수 있어요', w:['소식이 더 느려졌어요','편지를 못 보내요','말을 꼭 타야 해요'], h:'몇 초면 도착!'},
+    ]),
+    poolGen('생활 도구',[
+      {q:'옛날 "빨래판"이 오늘날 바뀐 것은?', c:'세탁기', w:['냉장고','전자레인지','텔레비전'], h:'빨래를 대신해줘요!'},
+      {q:'옛날 "가마솥"이 오늘날 바뀐 것은?', c:'전기밥솥', w:['세탁기','선풍기','청소기'], h:'밥을 짓는 도구!'},
+      {q:'옛날 "호롱불"이 오늘날 바뀐 것은?', c:'전등', w:['난로','거울','창문'], h:'어두운 밤을 밝혀요!'},
+      {q:'옛날 "부채"가 오늘날 바뀐 것은?', c:'선풍기·에어컨', w:['난로','전등','다리미'], h:'시원하게 해줘요!'},
+      {q:'옛날 "절구"가 오늘날 바뀐 것은?', c:'믹서', w:['오븐','주전자','국자'], h:'곡식을 빻고 갈아요!'},
+    ]),
+  ]
+};
+MODULES.soc2={
+  concept(){ return `
+    <div class="card"><span class="method-tag">개념 1 · 고장의 여러 장소</span>
+      <h3>🗺️ 우리 고장엔 어떤 곳이?</h3>
+      <p>우체국(편지·택배) · 소방서(불 끄기) · 경찰서(안전) · 도서관(책) · 보건소(건강) · 시장(사고팔기)</p>
+      <p>모두가 함께 쓰는 곳을 <span class="hl">공공기관</span>이라 해요.</p></div>
+    <div class="card"><span class="method-tag">개념 2 · 방향과 지도</span>
+      <h3>🧭 동서남북</h3>
+      <p>해가 뜨는 쪽이 <b>동쪽</b>, 지는 쪽이 <b>서쪽</b>. 지도에서 위쪽은 보통 <b>북쪽</b>!</p>
+      <div class="tipbox"><b>기억!</b> 높은 곳에서 내려다본 모습을 약속된 기호로 줄여 그린 것이 <b>지도</b>예요.</div></div>`;
+  },
+  games:[{name:'🃏 장소 짝맞추기', build:matchGame([
+    ['우체국','편지·택배'],['소방서','불 끄기'],['도서관','책 빌리기'],
+    ['경찰서','안전 지키기'],['시장','물건 사고팔기'],['보건소','아플 때 진료']
+  ],'🏘️ 장소와 하는 일을 짝지어요!')}],
+  gens:[
+    poolGen('고장의 장소',[
+      {q:'편지와 택배를 보내는 곳은?', c:'우체국', w:['소방서','도서관','시장'], h:'우표를 붙여서!'},
+      {q:'불이 나면 출동하는 곳은?', c:'소방서', w:['우체국','은행','학교'], h:'빨간 소방차!'},
+      {q:'책을 빌려 읽을 수 있는 곳은?', c:'도서관', w:['시장','경찰서','목욕탕'], h:'조용히 책 읽는 곳!'},
+      {q:'물건을 사고파는 곳은?', c:'시장', w:['보건소','파출소','도서관'], h:'떡볶이도 팔아요!'},
+      {q:'우리의 안전을 지켜 주는 곳은?', c:'경찰서', w:['빵집','문방구','놀이터'], h:'112!'},
+      {q:'예방주사를 맞으러 가는 곳은?', c:'보건소', w:['우체국','시장','소방서'], h:'건강을 지켜줘요!'},
+    ]),
+    poolGen('방향과 지도',[
+      {q:'지도에서 위쪽은 보통 어느 방향?', c:'북쪽', w:['남쪽','동쪽','서쪽'], h:'지도의 약속!'},
+      {q:'해가 뜨는 방향은?', c:'동쪽', w:['서쪽','남쪽','북쪽'], h:'아침 해!'},
+      {q:'해가 지는 방향은?', c:'서쪽', w:['동쪽','남쪽','북쪽'], h:'저녁노을!'},
+      {q:'높은 곳에서 내려다본 모습을 줄여 그린 것은?', c:'지도', w:['사진첩','일기','동화책'], h:'약속된 기호로 그려요!'},
+      {q:'학교 가는 길을 간단히 그린 그림은?', c:'약도', w:['초상화','만화','달력'], h:'간단한 지도!'},
+      {q:'북쪽을 바라보고 섰을 때 오른손 방향은?', c:'동쪽', w:['서쪽','남쪽','북쪽'], h:'북쪽 보고 오른쪽 = 동쪽!'},
+    ]),
+    poolGen('공공 예절',[
+      {q:'공공기관이 <b>아닌</b> 것은?', c:'문방구(가게)', w:['소방서','경찰서','우체국'], h:'가게는 개인이 운영해요!'},
+      {q:'도서관에서 지켜야 할 일은?', c:'조용히 책 읽기', w:['큰 소리로 노래하기','뛰어다니기','과자 부스러기 흘리기'], h:'다른 사람을 배려해요!'},
+      {q:'소방차가 사이렌을 울리며 달려오면?', c:'길을 비켜 줘요', w:['앞을 막아요','경주해요','따라가며 구경해요'], h:'1초가 급해요!'},
+      {q:'119에 전화하는 때는?', c:'불이 나거나 크게 다쳤을 때', w:['심심할 때','숙제를 모를 때','장난치고 싶을 때'], h:'장난 전화는 절대 금지!'},
+      {q:'112는 어디로 연결되는 번호?', c:'경찰서', w:['소방서','우체국','학교'], h:'도둑이나 위험할 때!'},
+    ]),
+  ]
+};
 
 /* ===================== 시작 + PWA ===================== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
