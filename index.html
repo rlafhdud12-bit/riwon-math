@@ -269,8 +269,8 @@ function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 /* ===================== 저장 (on-device) ===================== */
 const SKEY='riwon_math_v2';
 let DB=loadDB();
-function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,bank:true,review:true,deep:true}, created:Date.now()}; }
-function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; return d; } }catch(e){} return freshDB(); }
+function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,think:true,bank:true,review:true,deep:true}, created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; if(d.stages.think===undefined)d.stages.think=true; return d; } }catch(e){} return freshDB(); }
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
@@ -441,21 +441,25 @@ function home(){
 }
 
 let curUnit=null, curStage='concept';
-function openUnit(id){ curUnit=UNITS.find(u=>u.id===id); curStage='concept'; setTheme(curUnit); renderUnit(); }
+function openUnit(id){ curUnit=UNITS.find(u=>u.id===id); curStage=DISCOVER[id]?'discover':'concept'; setTheme(curUnit); renderUnit(); }
 function setStage(s){ curStage=s; clearTimers(); PLAY=null; renderUnit(); }
 
 function unitStages(u){
   const defs=[
+    {id:'discover',t:'🔍 발견'},
     {id:'concept', t:'개념'},
     {id:'game',    t:u.gname||'게임', opt:'game'},
     {id:'quiz',    t:'퀴즈'},
+    {id:'think',   t:'🧠 생각', opt:'think'},
     {id:'bank',    t:'문제은행', opt:'bank'},
     {id:'review',  t:'복습·분석', opt:'review'},
     {id:'deep',    t:'🚀 심화', opt:'deep'},
   ];
   return defs.filter(s=>{
     if(s.opt && DB.stages[s.opt]===false) return false;
+    if(s.id==='discover' && !DISCOVER[u.id]) return false;
     if(s.id==='game' && !(MODULES[u.id].games&&MODULES[u.id].games.length)) return false;
+    if(s.id==='think' && !MODULES[u.id].thinkGens) return false;
     if(s.id==='deep' && !MODULES[u.id].deepGens) return false;
     return true;
   }).map((s,i)=>Object.assign({}, s, {n:'STEP '+(i+1)}));
@@ -477,12 +481,14 @@ function renderUnit(){
     </div>
     <div id="stage-body"></div>`;
   const body=$('#stage-body');
-  if(curStage==='concept') body.innerHTML=MODULES[u.id].concept();
+  if(curStage==='discover') runDiscover(body,u.id);
+  else if(curStage==='concept') body.innerHTML=MODULES[u.id].concept();
   else if(curStage==='game') renderGames(body,u.id);
   else if(curStage==='quiz') startMaster(u.id,body);
+  else if(curStage==='think') startMaster(u.id,body,'think');
   else if(curStage==='bank') startBank(u.id,body);
   else if(curStage==='review') renderReview(body,u.id);
-  else if(curStage==='deep') startMaster(u.id,body,true);
+  else if(curStage==='deep') startMaster(u.id,body,'deep');
 }
 
 /* 그림게임 서브탭 */
@@ -508,8 +514,9 @@ function pickGen(unitId){
   for(let i=0;i<gens.length;i++){ r-=w[i]; if(r<=0) return gens[i]; }
   return gens[gens.length-1];
 }
-function buildMasterSet(unitId, deep){
-  const gens=deep? MODULES[unitId].deepGens : MODULES[unitId].gens;
+function buildMasterSet(unitId, variant){
+  const m=MODULES[unitId];
+  const gens = variant==='deep'? m.deepGens : variant==='think'? m.thinkGens : m.gens;
   const per=gens.length>=4?2:3, set=[];
   gens.forEach(g=>{ for(let k=0;k<per;k++) set.push(genOne(unitId,g)); });
   return shuffle(set).slice(0, Math.min(14, set.length));
@@ -517,9 +524,9 @@ function buildMasterSet(unitId, deep){
 
 /* ===================== 플레이 엔진 ===================== */
 let PLAY=null;
-function startMaster(unitId,body,deep){
-  const set=buildMasterSet(unitId,deep); set.forEach((s,i)=>s.id=i);
-  PLAY={mode:'master',unitId,body,deep:!!deep,queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
+function startMaster(unitId,body,variant){
+  const set=buildMasterSet(unitId,variant); set.forEach((s,i)=>s.id=i);
+  PLAY={mode:'master',unitId,body,deep:variant==='deep',think:variant==='think',queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
   advance();
 }
 function startBank(unitId,body){
@@ -646,7 +653,12 @@ function rewardCardHTML(newCards){
 function finishMaster(){
   const P=PLAY; P.cur=null; const ud=unitDB(P.unitId);
   let reward, subText;
-  if(P.deep){
+  if(P.think){
+    ud.thinkClears=(ud.thinkClears||0)+1;
+    reward=rewardForClear(ud.thinkClears-1)+1;
+    logEvent(P.unitId,'think',1);
+    subText='"왜?"를 생각한 보너스 +1! 정답보다 이유가 중요해 🧠';
+  } else if(P.deep){
     ud.deepClears=(ud.deepClears||0)+1;
     reward=rewardForClear(ud.deepClears-1)+2;
     logEvent(P.unitId,'deep',1);
@@ -665,9 +677,11 @@ function finishMaster(){
   confetti(true); sfx('win'); idolPopup(pick(LINES.clear), true);
   P.body.innerHTML=`
     <div class="result card">
-      <div class="stars">${P.deep?'🚀'+stars:stars}</div>
-      <h2>${curUnit.name} ${P.deep?'심화':'퀴즈'} 클리어!</h2>
+      <div class="stars">${P.think?'🧠'+stars:P.deep?'🚀'+stars:stars}</div>
+      <h2>${curUnit.name} ${P.think?'생각':P.deep?'심화':'퀴즈'} 클리어!</h2>
       <div class="msg">${msg}</div>
+      ${INSIGHT[P.unitId]?`<div class="tipbox" style="text-align:left">💡 <b>오늘의 핵심:</b> ${INSIGHT[P.unitId]}</div>`:''}
+      ${P.think&&TALK[P.unitId]?`<div class="tipbox" style="text-align:left;border-left-color:#54a0ff">💬 <b>아빠·엄마와 이야기해 봐!</b><br>${pick(TALK[P.unitId])}</div>`:''}
       <div class="reward-banner">🎟️ 스티커 +${reward}!<br><span style="font-size:13px;font-weight:700;color:var(--soft)">${subText}</span></div>
       ${rewardCardHTML(newCards)}
       <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 다시 푼 문제 ${P.retry}개</span></div>
@@ -742,7 +756,7 @@ function renderReview(body,unitId){
 /* ===================== 부모용 대시보드 ===================== */
 function fmtTime(s){ const m=Math.floor(s/60), h=Math.floor(m/60); return h>0?`${h}시간 ${m%60}분`:`${m}분`; }
 function fmtAgo(t){ const d=Date.now()-t, mi=Math.floor(d/60000); if(mi<1)return '방금'; if(mi<60)return mi+'분 전'; const h=Math.floor(mi/60); if(h<24)return h+'시간 전'; return Math.floor(h/24)+'일 전'; }
-const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습', deep:'🚀 심화 클리어'};
+const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습', deep:'🚀 심화 클리어', think:'🧠 생각 클리어', discover:'🔍 개념 발견'};
 function renderDashboard(){
   stopStudyClock(); setTheme(null);
   const acc=DB.totalSolved?Math.round(DB.totalCorrect/DB.totalSolved*100):0;
@@ -775,7 +789,7 @@ function renderDashboard(){
       <h3>🛠️ 단계 설정 (부모용)</h3>
       <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 수준에 맞게 단계를 켜고 꺼요. 끈 단계는 화면에서 사라지고 번호가 다시 매겨져요. (개념·퀴즈는 항상 보여요)</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${[['game','🎮 게임 단계'],['bank','🏦 문제은행'],['review','📘 복습·분석'],['deep','🚀 심화']].map(([k,t])=>
+        ${[['game','🎮 게임 단계'],['think','🧠 생각'],['bank','🏦 문제은행'],['review','📘 복습·분석'],['deep','🚀 심화']].map(([k,t])=>
           `<button class="wpill" style="${DB.stages[k]?'border-color:var(--c);color:var(--c-dark)':'opacity:.45'}" onclick="toggleStage('${k}')">${DB.stages[k]?'✅':'⬜'} ${t}</button>`).join('')}
       </div>
     </div>
@@ -2178,6 +2192,392 @@ MODULES.soc2.deepGens=[
     {q:'공원에서의 바른 행동은?', c:'꽃을 꺾지 않고 눈으로 즐기기', w:['꽃을 꺾어 가기','나무에 낙서하기','쓰레기 두고 오기'], h:'모두의 공원!'},
     {q:'버스에서 어르신이 서 계시면?', c:'자리를 양보한다', w:['모른 척한다','자는 척한다','더 깊이 앉는다'], h:'배려하는 마음!'},
     {q:'밤에 시끄러운 소리로 이웃이 힘들어한다면?', c:'서로 약속을 정해 조용히 한다', w:['더 크게 소리 낸다','이사 가라고 한다','싸운다'], h:'이웃과는 대화로!'},
+  ]),
+];
+
+/* =========================================================
+   🔍 발견 모드 — 개념을 스스로 찾아내는 단계 (설명보다 발견이 먼저!)
+   ========================================================= */
+function runDiscover(body, unitId){
+  window._dc={steps:DISCOVER[unitId], i:0, body, unitId, perm:null, locked:false};
+  dcDraw();
+}
+function dcDraw(){
+  const D=window._dc, s=D.steps[D.i];
+  D.perm=shuffle(s.choices.map((t,k)=>({t,k})));
+  D.locked=false;
+  D.body.innerHTML=`<div class="card">
+    <span class="method-tag">🔍 관찰하고 발견하기 ${D.i+1}/${D.steps.length}</span>
+    <p style="font-weight:800;margin:4px 0 10px">정답을 알려주지 않을 거야. 잘 관찰하고 <b>네 생각</b>을 골라봐!</p>
+    <div class="formula" style="font-size:15.5px;line-height:1.8">${s.show}</div>
+    <div class="q-text" style="font-size:19px;text-align:center;margin-top:12px">${s.q}</div>
+    <div class="choice-grid">${D.perm.map((c,i)=>`<button class="choice-btn" id="dc${i}" onclick="dcPick(${i})">${c.t}</button>`).join('')}</div>
+    <div class="feedback" id="dc-fb"></div>
+    <div id="dc-next"></div>
+  </div>`;
+}
+function dcPick(i){
+  const D=window._dc, s=D.steps[D.i], fb=$('#dc-fb');
+  if(D.locked)return;
+  if(D.perm[i].k===s.a){
+    D.locked=true; sfx('ok'); confetti(false);
+    D.perm.forEach((c,x)=>{ const b=$('#dc'+x); if(!b)return; b.disabled=true; if(c.k===s.a)b.classList.add('correct'); });
+    fb.className='feedback ok'; fb.textContent='네가 직접 발견했어! 🎉';
+    $('#dc-next').innerHTML=`<div class="tipbox" style="text-align:left">${s.yes}</div>
+      <button class="bigbtn" style="margin-top:12px" onclick="dcNext()">${D.i+1<D.steps.length?'다음 발견 ▶':'발견 완료! 🏁'}</button>`;
+  } else {
+    sfx('no');
+    const b=$('#dc'+i); if(b){ b.classList.add('wrongpick'); setTimeout(()=>b.classList.remove('wrongpick'),700); }
+    fb.className='feedback no'; fb.textContent='괜찮아! 천천히 다시 관찰해 봐 👀';
+  }
+}
+function dcNext(){
+  const D=window._dc;
+  D.i++;
+  if(D.i<D.steps.length){ dcDraw(); return; }
+  const ud=unitDB(D.unitId);
+  let bonus=0;
+  if(!ud.discoverDone){ ud.discoverDone=1; bonus=2; addStickers(2); logEvent(D.unitId,'discover',1); }
+  const newCards=checkCardUnlocks(); saveDB();
+  confetti(true); sfx('win');
+  D.body.innerHTML=`<div class="result card">
+    <div class="stars">🔍✨</div>
+    <h2>개념을 스스로 발견했어!</h2>
+    <div class="msg">누가 알려준 게 아니라 <b>네 눈으로 찾아낸 규칙</b>이야.<br>이게 진짜 공부야!</div>
+    ${INSIGHT[D.unitId]?`<div class="tipbox" style="text-align:left">💡 <b>네가 발견한 것:</b> ${INSIGHT[D.unitId]}</div>`:''}
+    ${bonus?`<div class="reward-banner">🎟️ 첫 발견 스티커 +${bonus}!</div>`:''}
+    ${rewardCardHTML(newCards)}
+    <button class="bigbtn" onclick="setStage('concept')">📖 발견한 규칙, 정리하러 가기</button>
+  </div>`;
+}
+
+/* ===== 단원별 발견 시나리오 ===== */
+const DISCOVER={
+  mul:[
+    {show:'묶음 1개 → 🐸🐸🐸🐸 (4마리)<br>묶음 2개 → 🐸🐸🐸🐸 🐸🐸🐸🐸 (8마리)<br>묶음 3개 → 🐸🐸🐸🐸 🐸🐸🐸🐸 🐸🐸🐸🐸 (12마리)',
+     q:'묶음이 1개 늘 때마다 개구리는 어떻게 될까?',
+     choices:['4마리씩 늘어난다','1마리씩 늘어난다','변하지 않는다'], a:0,
+     yes:'딩동댕! 같은 수가 반복해서 더해지며 늘어나는 것 — 이걸 <b>곱셈(×)</b>이라고 해. 4×3은 "4가 3번"이라는 뜻이야!'},
+    {show:'4 + 4 + 4 + 4 + 4 = 20',
+     q:'이 긴 식을 짧게 쓰는 방법은?',
+     choices:['4 × 5','4 + 5','4 ÷ 5'], a:0,
+     yes:'맞아! 같은 수를 여러 번 더할 땐 × 하나면 끝. 곱셈은 <b>덧셈을 빠르게 하는 발명품</b>이야!'},
+  ],
+  div:[
+    {show:'🍪 12개를 똑같이 나눠 담으면…<br>접시 2개 → 6개씩<br>접시 3개 → 4개씩<br>접시 4개 → 3개씩',
+     q:'접시가 많아질수록 한 접시의 쿠키는?',
+     choices:['점점 적어진다','점점 많아진다','항상 그대로다'], a:0,
+     yes:'발견했어! 똑같이 나눌수록 한 사람 몫이 줄어드는 것 — 이게 <b>나눗셈(÷)</b>이야!'},
+    {show:'3 × 4 = 12',
+     q:'그럼 12 ÷ 3 의 답은 어디에 숨어 있을까?',
+     choices:['4 — 곱셈을 거꾸로 읽으면 된다','7 — 둘을 더하면 된다','9 — 빼면 된다'], a:0,
+     yes:'곱셈과 나눗셈은 <b>거꾸로 관계</b>! 이 비밀 하나면 나눗셈이 훨씬 쉬워져.'},
+  ],
+  frac:[
+    {show:'🍕 피자 한 판을…<br>2조각으로 → 한 조각이 커다람!<br>4조각으로 → 중간<br>8조각으로 → 조그맣!',
+     q:'많이 나눌수록 한 조각은?',
+     choices:['작아진다','커진다','그대로다'], a:0,
+     yes:'그래서 1/2이 1/8보다 큰 거야! <b>분모(나눈 수)가 작을수록 큰 조각</b> — 네가 방금 발견한 분수의 제1 비밀!'},
+    {show:fracBar(4,3),
+     q:'전체 4칸 중 3칸을 색칠했어. 분수로 나타내면?',
+     choices:['3/4','4/3','3 - 4'], a:0,
+     yes:'아래(분모)는 나눈 수, 위(분자)는 고른 수! 분수 읽는 법을 스스로 알아냈어.'},
+  ],
+  len:[
+    {show:'1분 = 60초<br>2분 = 120초<br>3분 = 180초',
+     q:'1분이 늘 때마다 초는 어떻게 변할까?',
+     choices:['60씩 커진다','10씩 커진다','1씩 커진다'], a:0,
+     yes:'발견! 단위 바꾸기는 사실 <b>곱셈</b>이었어. 분→초는 ×60, cm→mm는 ×10. 약속만 알면 다 풀려!'},
+  ],
+  cap:[
+    {show:'1L = 1000mL<br>2L = 2000mL<br>3L = ❓mL',
+     q:'규칙을 발견했다면, 3L는 몇 mL일까?',
+     choices:['3000mL — 1000씩 커지니까','300mL — 100씩 커지니까','3mL — 그대로니까'], a:0,
+     yes:'완벽해! L→mL는 ×1000. 그리고 무게(kg→g)도 똑같이 ×1000이야. 하나를 발견하면 둘을 아는 거지!'},
+  ],
+  kor1:[
+    {show:'"가도 <b>돼</b>?" → "가도 <b>되어</b>?" (말이 됨 ⭕)<br>"의사가 <b>되</b>고 싶어" → "되어고 싶어" (이상함 ❌)',
+     q:'그렇다면 "돼"는 언제 쓰는 걸까?',
+     choices:['"되어"로 바꿔서 말이 될 때','문장 맨 앞에 올 때','기분이 좋을 때'], a:0,
+     yes:'규칙을 스스로 찾았어! 헷갈릴 땐 <b>"되어"를 넣어보기</b> — 이 마법 하나면 되/돼는 평생 안 틀려.'},
+  ],
+  kor2:[
+    {show:'크다 ↔ 작다<br>높다 ↔ 낮다<br>밝다 ↔ 어둡다',
+     q:'이 낱말 짝들의 공통 관계는?',
+     choices:['뜻이 정반대다','뜻이 똑같다','글자 수가 같다'], a:0,
+     yes:'바로 <b>반대말</b>! 낱말을 짝으로 알아두면 한 낱말의 뜻이 두 배로 또렷해져.'},
+    {show:'멍멍 · 삐악삐악 · 주룩주룩<br>깡충깡충 · 반짝반짝 · 엉금엉금',
+     q:'윗줄과 아랫줄의 차이는 뭘까?',
+     choices:['소리 흉내 vs 모양 흉내','동물 말 vs 사람 말','짧은 말 vs 긴 말'], a:0,
+     yes:'위는 귀로 들은 <b>소리</b>, 아래는 눈으로 본 <b>모양</b>을 흉내 낸 말! 흉내말을 쓰면 글이 살아 움직여.'},
+  ],
+  kor3:[
+    {show:'밥 → 진지<br>나이 → 연세<br>자다 → 주무시다',
+     q:'오른쪽 낱말들은 언제 쓰는 말일까?',
+     choices:['웃어른께 말할 때','동물에게 말할 때','혼잣말할 때'], a:0,
+     yes:'<b>높임말</b>이야! 높임말은 멋 부리는 게 아니라 존중하는 마음을 담는 그릇이라는 걸 기억해.'},
+  ],
+  eng1:[
+    {show:'A a &nbsp;·&nbsp; B b &nbsp;·&nbsp; D d &nbsp;·&nbsp; G g',
+     q:'큰 글자와 작은 글자, 둘의 관계는?',
+     choices:['같은 글자의 두 가지 모습','서로 완전히 다른 글자','반대 뜻인 글자'], a:0,
+     yes:'맞아! 대문자·소문자는 <b>한 글자의 옷 두 벌</b>이야. 모양은 달라도 같은 소리를 내지.'},
+  ],
+  eng2:[
+    {show:'<b>d</b>og(개) · <b>d</b>ad(아빠) · <b>d</b>oor(문)<br>모두 "드~" 소리로 시작!',
+     q:'글자 d는 어떤 소리를 낼까?',
+     choices:['드','브','크'], a:0,
+     yes:'발견! 알파벳마다 소리가 있어. <b>소리를 알면 처음 보는 단어도 읽을 수 있어</b> — 영어 읽기의 최고 비밀!'},
+  ],
+  sci1:[
+    {show:'자석에 붙음 ⭕ : 클립 · 쇠못 · 가위날<br>안 붙음 ❌ : 지우개 · 유리컵 · 색종이',
+     q:'붙는 것들의 공통점은 뭘까?',
+     choices:['철로 되어 있다','무겁다','학교에 있는 물건이다'], a:0,
+     yes:'명탐정! 자석의 비밀은 <b>철</b>이야. 모양·색깔이 아니라 <b>무엇으로 만들었는지</b>가 중요해.'},
+  ],
+  sci2:[
+    {show:'🥚 알 → 🐛 애벌레 → 🛡️ 번데기 → 🦋 나비',
+     q:'나비가 자라는 과정의 특징은?',
+     choices:['모습을 완전히 바꾸며 자란다','태어날 때부터 나비다','점점 작아진다'], a:0,
+     yes:'이 한 바퀴 과정을 <b>한살이</b>라고 해! 동물마다 한살이가 다르다는 것, 그게 이번 단원의 핵심이야.'},
+  ],
+  soc1:[
+    {show:'가마 → 자동차<br>봉수 → 휴대전화<br>호롱불 → 전등',
+     q:'도구들이 변해 온 공통 방향은?',
+     choices:['더 빠르고 편리해졌다','더 무거워졌다','더 불편해졌다'], a:0,
+     yes:'사람들은 늘 <b>"어떻게 하면 더 편리할까?"</b>를 고민하며 도구를 발전시켜 왔어. 다음엔 뭐가 나올까?'},
+  ],
+  soc2:[
+    {show:'소방서 = 불 끄기<br>우체국 = 편지·택배<br>도서관 = 책 빌려주기',
+     q:'이곳들의 공통점은 뭘까?',
+     choices:['모두를 위해 일하는 곳','물건을 파는 가게','우리 가족만 쓰는 곳'], a:0,
+     yes:'바로 <b>공공기관</b>! 나라가 모두를 위해 만든 곳이라 누구나 이용할 수 있어.'},
+  ],
+};
+
+/* ===== 💡 단원별 핵심 한 줄 + 💬 부모와 생각 나누기 ===== */
+const INSIGHT={
+  mul:'곱셈은 같은 수를 빠르게 더하는 발명품!',
+  div:'나눗셈은 곱셈을 거꾸로 읽는 것!',
+  frac:'분수는 "똑같이 나눈 조각" 이야기 — 분모가 작을수록 큰 조각!',
+  len:'단위 바꾸기는 곱셈! (×10, ×60, ×100)',
+  cap:'L↔mL, kg↔g 모두 1000의 약속!',
+  kor1:'헷갈리면 "되어"를 넣어 보기!',
+  kor2:'낱말은 짝(반대말·비슷한말)으로 외우면 두 배!',
+  kor3:'높임말은 존중하는 마음을 담는 그릇!',
+  eng1:'대·소문자는 한 글자의 두 가지 모습!',
+  eng2:'글자의 소리를 알면 처음 본 단어도 읽을 수 있어!',
+  sci1:'자석의 비밀은 철, 그리고 두 개의 극!',
+  sci2:'동물은 저마다 다른 한살이로 살아가!',
+  soc1:'도구는 늘 "더 편리하게"라는 방향으로 발전!',
+  soc2:'공공기관은 세금으로 운영되는 모두의 것!',
+};
+const TALK={
+  mul:['0에 어떤 수를 곱해도 0이 되는 까닭을 아빠·엄마에게 설명해 줘!','세상에 곱셈이 없다면 뭐가 가장 불편할까? 같이 상상해 보자.'],
+  div:['쿠키 7개를 2명이 나누면 어떻게 될까? 남는 1개는 어떻게 하는 게 좋을까?','우리 가족 피자 한 판, 공평하게 나누는 방법을 정해 보자!'],
+  frac:['피자를 100조각으로 나누면 한 조각은 어떻게 될까? 1000조각이라면?','케이크 반의 반은 얼마일까? 그림으로 그려서 설명해 줘!'],
+  len:['1초가 지금보다 2배 길어진다면 하루는 어떻게 변할까?','집에서 1m쯤 되는 물건을 찾아보고 자로 확인해 보자!'],
+  cap:['물 1L가 얼마나 되는지 집에서 찾아보자! 우유갑? 물병? 직접 확인!','몸무게 1kg이 늘려면 얼마나 먹어야 할까? 같이 추리해 보자.'],
+  kor1:['맞춤법이 왜 필요할까? 모두가 마음대로 쓰면 어떤 일이 생길까?','오늘 가족 단톡방에서 틀린 맞춤법을 찾아보자! (혼내기 금지 😄)'],
+  kor2:['"행복하다"의 반대말은 뭘까? 정답이 꼭 하나일까? 같이 토론!','오늘 하루를 흉내말 3개로 표현해 보자. 예: 아침엔 꾸물꾸물…'],
+  kor3:['높임말이 없는 나라도 있대. 높임말이 있어 좋은 점과 불편한 점을 말해 보자!','오늘 저녁, 가족에게 높임말로만 말해 보기 도전! 어땠어?'],
+  eng1:['한글과 알파벳, 닮은 점과 다른 점을 하나씩 찾아보자!','내 이름을 알파벳으로 써 보고 첫 글자를 대문자로 만들어 보자!'],
+  eng2:['외국 친구가 전학 온다면 어떤 영어 인사를 해 주고 싶어?','집 안 물건 3개를 영어로 말해 보자. 모르면 같이 찾아보기!'],
+  sci1:['집에서 자석이 숨어 있는 물건을 3개 찾아보자! (냉장고 말고 또?)','자석으로 할 수 있는 새로운 발명품을 상상해서 그려 보자!'],
+  sci2:['사람의 한살이는 어떻게 될까? 아기 → ? → ? 같이 채워 보자!','리원이가 아기였을 때 사진을 보며 어떻게 자랐는지 이야기해 보자!'],
+  soc1:['30년 뒤엔 어떤 교통수단이 생길까? 상상해서 그려 보자!','할머니·할아버지께 옛날에 쓰던 물건 이야기를 여쭤 보자!'],
+  soc2:['우리 동네에 새 공공기관을 만든다면 뭐가 가장 필요할까?','우리 집에서 가장 가까운 소방서·도서관이 어디인지 지도에서 찾아보자!'],
+};
+
+/* =========================================================
+   🧠 생각 단계 — 왜 그럴까? · 오개념 찾기 · 거꾸로 문제
+   ========================================================= */
+MODULES.mul.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'4 × 3 = 12. <b>왜</b> 12일까?', c:'4를 3번 더한 것이라서 (4+4+4)', w:['4에서 3을 빼서','4와 3을 더해서','그냥 외우는 거라서'], h:'곱셈의 뜻을 떠올려!'},
+    {q:'0 × 7 = 0. 왜일까?', c:'0을 7번 더해도 0이라서', w:['7이 너무 커서','0은 사실 1이라서','계산기가 그렇게 말해서'], h:'0+0+0+…은?'},
+    {q:'3×4와 4×3의 답이 같은 까닭은?', c:'줄을 가로로 세나 세로로 세나 전체는 같아서', w:['우연히 같은 것','선생님이 정한 규칙이라서','사실은 답이 다르다'], h:'점 배열을 옆으로 눕혀 봐!'},
+    {q:'6×10을 빨리 푸는 방법과 그 까닭은?', c:'6 뒤에 0을 붙인다 — 10배는 자리가 하나 커져서', w:['6에 1을 더한다','6을 10번 쓴다','답을 0으로 한다'], h:'10배의 비밀!'},
+    {q:'13×3을 (10×3)+(3×3)으로 풀어도 되는 까닭은?', c:'13묶음 = 10묶음 + 3묶음, 쪼개도 전체는 같아서', w:['10이 제일 큰 수라서','쪼개면 답이 작아져서','풀면 안 된다'], h:'쪼개기 마법!'},
+  ]),
+  poolGen('🔄 거꾸로·오개념',[
+    {q:'답이 12가 되는 식은?', c:'3 × 4', w:['3 × 5','2 × 5','4 × 4'], h:'구구단을 거꾸로!'},
+    {q:'답이 18이 되는 식은?', c:'2 × 9', w:['3 × 5','2 × 8','4 × 5'], h:'2단에서 찾아봐!'},
+    {q:'<b>잘못</b> 말한 친구는?', c:'"곱하면 답이 항상 커져"', w:['"4×3은 4+4+4와 같아"','"3×4와 4×3은 답이 같아"','"0×9는 0이야"'], h:'×1과 ×0을 떠올려 봐!'},
+    {q:'2×6과 답이 <b>같은</b> 식은?', c:'3 × 4', w:['2 × 5','5 × 3','6 × 6'], h:'둘 다 12!'},
+    {q:'사탕이 5개씩 4봉지. 알맞은 식은?', c:'5 × 4', w:['5 + 4','5 - 4','4 ÷ 5'], h:'5씩 4묶음!'},
+  ]),
+];
+MODULES.div.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'12 ÷ 3 = 4. <b>왜</b> 4일까?', c:'3 × 4 = 12 라서 (곱셈의 거꾸로)', w:['12 - 3 = 9 라서','3 + 4 = 7 이라서','4가 행운의 수라서'], h:'곱셈으로 거꾸로!'},
+    {q:'나누는 수가 커질수록 몫이 작아지는 까닭은?', c:'더 많은 사람과 나누면 한 명 몫이 줄어서', w:['숫자가 무거워져서','나눗셈이 어려워서','몫은 항상 똑같아서'], h:'12개를 2명 vs 6명!'},
+    {q:'0 ÷ 5 = 0 인 까닭은?', c:'아무것도 없으면 나눠도 아무것도 없어서', w:['5가 너무 커서','0은 나눌 수 없어서','답이 사실 5라서'], h:'쿠키 0개를 5명이 나누면?'},
+    {q:'8÷2와 8÷4 중 몫이 큰 것과 그 까닭은?', c:'8÷2 — 적은 인원이 나누면 많이 받아서', w:['8÷4 — 4가 더 커서','둘이 똑같다','비교할 수 없다'], h:'2명이면 4개씩, 4명이면 2개씩!'},
+  ]),
+  poolGen('🔄 거꾸로·오개념',[
+    {q:'답(몫)이 4인 나눗셈은?', c:'20 ÷ 5', w:['20 ÷ 4','12 ÷ 6','8 ÷ 4'], h:'5×4=20!'},
+    {q:'답(몫)이 3인 나눗셈은?', c:'27 ÷ 9', w:['24 ÷ 6','15 ÷ 3','9 ÷ 9'], h:'9×3=27!'},
+    {q:'<b>잘못</b> 말한 친구는?', c:'"나누면 답이 항상 작아져"', w:['"12÷3은 3×□=12로 풀 수 있어"','"나눗셈은 똑같이 나누는 거야"','"12÷4는 3이야"'], h:'12÷1은 얼마일까?'},
+    {q:'쿠키 15개를 3명이 똑같이. 알맞은 식은?', c:'15 ÷ 3', w:['15 × 3','15 - 3','3 ÷ 15'], h:'전체 ÷ 사람 수!'},
+  ]),
+];
+MODULES.frac.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'1/2이 1/8보다 큰 까닭은?', c:'2조각으로만 나누면 한 조각이 더 커서', w:['1이 8보다 작아서','8이 더 커 보여서','사실 둘은 같아서'], h:'피자를 떠올려!'},
+    {q:'3/8과 5/8 중 큰 것과 그 까닭은?', c:'5/8 — 같은 크기 조각을 더 많이 가져서', w:['3/8 — 3이 먼저 와서','같다 — 분모가 같아서','알 수 없다'], h:'조각 크기가 같으면 개수 싸움!'},
+    {q:'분모(아래 수)가 알려 주는 것은?', c:'전체를 똑같이 몇 조각으로 나눴는지', w:['색칠한 조각 수','피자의 맛','전체의 크기'], h:'아래 숫자의 역할!'},
+    {q:'2/4와 1/2이 같은 까닭은?', c:'4조각 중 2조각도 결국 절반이라서', w:['2가 두 번 나와서','분모가 달라 사실 다르다','우연이라서'], h:'그림으로 그려 보면 둘 다 절반!'},
+  ]),
+  poolGen('🔄 거꾸로·오개념',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"분모가 클수록 조각이 커"', w:['"분자는 색칠한 조각 수야"','"1/2은 1/3보다 커"','"분수는 똑같이 나눠야 해"'], h:'많이 나눌수록 조각은?'},
+    {q:'케이크를 크기가 <b>다르게</b> 3조각 냈어. 한 조각을 1/3이라 할 수 있을까?', c:'없다 — 분수는 똑같이 나눠야 해서', w:['있다 — 3조각이면 무조건 1/3','케이크니까 괜찮다','큰 조각만 1/3이다'], h:'분수의 약속: 똑같이!'},
+    {q:'1과 똑같은 분수는?', c:'4/4', w:['1/4','3/4','2/4'], h:'전체를 다 가지면 1!'},
+    {q:'색칠 안 한 부분이 2/5라면, 색칠한 부분은?', c:'3/5', w:['2/5','5/5','1/5'], h:'전체는 5/5!'},
+  ]),
+];
+MODULES.len.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'분→초로 바꿀 때 ×60을 하는 까닭은?', c:'1분 안에 1초가 60개 들어 있어서', w:['60이 멋진 수라서','시계가 둥글어서','무조건 외우는 규칙이라서'], h:'1분 = 60초!'},
+    {q:'cm→mm로 바꾸면 숫자가 커지는 까닭은?', c:'더 작은 단위로 재면 개수가 많아져서', w:['길이가 실제로 길어져서','mm가 cm보다 커서','자가 늘어나서'], h:'같은 길이를 잘게 세면?'},
+    {q:'사람 키를 잴 때 km를 안 쓰는 까닭은?', c:'km는 너무 큰 단위라 어울리지 않아서', w:['km는 길이 단위가 아니라서','법으로 금지돼서','어른만 쓰는 단위라서'], h:'단위는 상황에 맞게!'},
+    {q:'1시간 30분과 90분의 관계는?', c:'같다 — 60분 + 30분 = 90분', w:['1시간 30분이 더 길다','90분이 더 길다','비교할 수 없다'], h:'단위를 통일해서 비교!'},
+  ]),
+  poolGen('🔄 거꾸로·오개념',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"100초는 1분이야"', w:['"1분은 60초야"','"2분은 120초야"','"1시간은 60분이야"'], h:'100초 = 1분 40초!'},
+    {q:'120초와 같은 것은?', c:'2분', w:['1분 20초','12분','1시간 20분'], h:'60초 = 1분!'},
+    {q:'40분짜리 수업 시간을 재기에 좋은 단위는?', c:'분', w:['초','시간','km'], h:'너무 잘지도, 너무 크지도 않게!'},
+    {q:'3시 50분에서 20분 뒤는?', c:'4시 10분', w:['3시 70분','4시 30분','3시 30분'], h:'60분이 차면 시가 하나 올라가!'},
+  ]),
+];
+MODULES.cap.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'L→mL로 바꿀 때 ×1000을 하는 까닭은?', c:'1L 안에 1mL가 1000개 들어 있어서', w:['1000이 외우기 쉬워서','물이 무거워서','병이 크기 때문에'], h:'1L = 1000mL!'},
+    {q:'주스 반 병이 약 500mL인 까닭은?', c:'1L(1000mL)의 절반이라서', w:['1L의 두 배라서','500L와 같아서','mL는 항상 500이라서'], h:'1000의 절반!'},
+    {q:'몸무게를 g 대신 kg으로 재는 까닭은?', c:'g로 재면 30000처럼 숫자가 너무 커져서', w:['kg이 더 정확해서','g은 음식 전용이라서','저울이 kg만 알아서'], h:'단위는 크기에 맞게!'},
+    {q:'솜 1kg과 돌 1kg, 더 무거운 것은?', c:'같다 — 둘 다 1kg', w:['돌 — 단단해서','솜 — 더 커 보여서','잴 수 없다'], h:'무게와 부피는 달라!'},
+  ]),
+  poolGen('🔄 거꾸로·오개념',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"500mL 두 개를 부으면 2L야"', w:['"1L는 1000mL야"','"2kg은 2000g이야"','"1000g은 1kg이야"'], h:'500+500=1000mL=1L!'},
+    {q:'1500mL와 같은 것은?', c:'1L 500mL', w:['15L','1L 50mL','5L 100mL'], h:'1000mL가 1L!'},
+    {q:'물 2L를 200mL 컵에 나누면 몇 컵?', c:'10컵', w:['2컵','5컵','20컵'], h:'2000 ÷ 200!'},
+  ]),
+];
+MODULES.kor1.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'친구가 "몇일 뒤에 보자"라고 썼어. 어떻게 알려 줄까?', c:'"며칠"이 바른 표기라고 알려 준다', w:['그대로 맞다고 한다','"멫일"로 고치라고 한다','맞춤법은 아무래도 좋다고 한다'], h:'"몇일"은 없는 말!'},
+    {q:'맞춤법을 지켜야 하는 가장 큰 까닭은?', c:'뜻이 정확하게 전달되게 하려고', w:['혼나지 않으려고','글씨를 예쁘게 쓰려고','시험에 나와서'], h:'약속이 다르면 못 알아들어!'},
+    {q:'"학교에 가면 안 돼"에서 "안"을 띄어 쓰는 까닭은?', c:'"아니"라는 뜻을 가진 독립된 말이라서', w:['글자가 예뻐 보여서','옛날부터 그냥 그래서','붙이면 너무 길어서'], h:'안 = 아니!'},
+    {q:'"답이 틀려"와 "생각이 달라"를 구별하는 기준은?', c:'정답이 아니면 틀리다, 같지 않으면 다르다', w:['아무거나 써도 된다','"틀리다"가 더 공손해서','"다르다"는 어른 말이라서'], h:'틀림과 다름은 달라!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"안과 않은 발음이 비슷하니 아무거나 써도 돼"', w:['"며칠이 바른 표기야"','"-지 않다처럼 않은 붙여 써"','"되어를 넣어 보면 되/돼를 구별할 수 있어"'], h:'쓰임이 분명히 달라요!'},
+    {q:'바르게 쓴 문장은?', c:'오랜만에 만나서 금세 친해졌다.', w:['오랫만에 만나서 금새 친해졌다.','오랜만에 만나서 금새 친해졌다.','오랫만에 만나서 금세 친해졌다.'], h:'오랜만 + 금세!'},
+    {q:'"선생님이 칠판을 가리켰다"가 맞는 까닭은?', c:'방향을 알려 주는 행동이라서', w:['지식을 알려 주는 것이라서','가르치다와 같은 말이라서','칠판이 크기 때문에'], h:'방향 = 가리키다!'},
+    {q:'동생이 "수학 답이 달라!"라고 외쳤어. 정답이 아니었다면 바른 말은?', c:'"답이 틀려"', w:['"답이 달라"가 맞다','"답이 다러"','아무 말이나 된다'], h:'정답이 아닐 땐 틀리다!'},
+  ]),
+];
+MODULES.kor2.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'반대말을 알면 좋은 점은?', c:'낱말의 뜻이 더 또렷하게 이해된다', w:['글씨가 빨라진다','목소리가 커진다','잠이 잘 온다'], h:'"크다"는 "작다"가 있어 더 분명!'},
+    {q:'"높다"의 반대가 "작다"가 아닌 까닭은?', c:'높이의 짝은 낮다, 크기의 짝은 작다라서', w:['"작다"가 더 짧아서','"높다"는 반대가 없어서','"작다"는 나쁜 말이라서'], h:'무엇을 재는지가 달라!'},
+    {q:'비슷한말이 여러 개 있어서 좋은 점은?', c:'느낌을 더 풍부하고 정확하게 표현할 수 있다', w:['외울 게 많아 나쁘기만 하다','아무 말이나 쓰면 된다','뜻이 사라진다'], h:'기쁘다·즐겁다·신나다, 조금씩 달라!'},
+    {q:'"깡충깡충"이 토끼에게 어울리는 까닭은?', c:'토끼가 뛰는 모양을 흉내 낸 말이라서', w:['토끼 울음소리라서','토끼 이름이라서','아무 동물에나 쓰는 말이라서'], h:'모양 흉내!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"멍멍은 모양을 흉내 낸 말이야"', w:['"반짝반짝은 모양 흉내야"','"주룩주룩은 소리 흉내야"','"크다의 반대는 작다야"'], h:'멍멍은 귀로 듣는 소리!'},
+    {q:'"시작이 반이다"에서 "시작"의 반대말은?', c:'끝', w:['중간','처음','출발'], h:'달리기의 처음과 마지막!'},
+    {q:'도서관에 어울리는 말은? "도서관에서는 (___) 말해요"', c:'조용히', w:['시끄럽게','크게','빠르게'], h:'장소에 어울리는 낱말!'},
+    {q:'비 오는 날 일기에 가장 생생한 표현은?', c:'"비가 주룩주룩 내렸다"', w:['"비가 왔다"만 쓴다','"비가 비처럼 왔다"','"비가 멍멍 왔다"'], h:'흉내말이 글을 살려!'},
+  ]),
+];
+MODULES.kor3.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'높임말을 쓰는 진짜 까닭은?', c:'상대를 존중하는 마음을 나타내려고', w:['길게 말하려고','어려운 말을 자랑하려고','점수를 받으려고'], h:'마음을 담는 그릇!'},
+    {q:'동생에게는 높임말을 쓰지 않는 까닭은?', c:'높임말은 웃어른께 쓰는 말이라서', w:['동생이 미워서','동생은 못 알아들어서','법으로 정해져서'], h:'누구에게 말하는지가 기준!'},
+    {q:'"할머니, 밥 먹어"가 어색한 까닭은?', c:'어른께는 "진지 잡수세요"가 어울려서', w:['목소리가 작아서','할머니가 배불러서','문장이 짧아서'], h:'낱말까지 높여야 완성!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"친구에게도 계시다라고 해야 해"', w:['"선생님께는 여쭤본다고 해"','"할머니 생신을 축하드려야 해"','"어른께는 드린다고 해"'], h:'친구에겐 편한 보통말!'},
+    {q:'전화로 "할머니 계세요?"가 바른 까닭은?', c:'할머니를 높여 "계시다"를 써서', w:['전화는 무조건 그렇게 해서','"있어요"는 금지어라서','더 짧은 말이라서'], h:'있다 → 계시다!'},
+    {q:'알맞은 말은? "선생님께서 우리를 (___)"', c:'부르셨다', w:['불렀다','부르랬다','불러댔다'], h:'-시-를 넣어요!'},
+  ]),
+];
+MODULES.eng1.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'b와 d를 안 헷갈리는 좋은 방법은?', c:'b는 막대 먼저, 배가 오른쪽!', w:['둘은 같은 글자라 상관없다','아무거나 쓴다','색깔로 구별한다'], h:'bed(침대)를 그려 보면 모양이 보여!'},
+    {q:'알파벳 순서를 알면 좋은 점은?', c:'사전에서 단어를 빨리 찾을 수 있다', w:['글씨가 커진다','발음이 저절로 된다','숙제가 사라진다'], h:'사전은 ABC 순서!'},
+    {q:'대문자는 주로 언제 쓸까?', c:'이름이나 문장의 첫 글자에', w:['아무 때나','단어 끝에','숫자 대신'], h:'Riwon처럼!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"알파벳은 모두 30글자야"', w:['"알파벳은 26글자야"','"A는 첫 글자야"','"Z는 마지막 글자야"'], h:'26글자!'},
+    {q:'p와 q의 차이는?', c:'서로 거울처럼 배 방향이 반대다', w:['완전히 같은 글자다','p가 훨씬 크다','q는 숫자다'], h:'거울 글자 조심!'},
+    {q:'한글과 알파벳의 닮은 점은?', c:'둘 다 소리를 나타내는 글자다', w:['둘 다 26글자다','둘 다 그림 문자다','생긴 게 똑같다'], h:'소리 글자!'},
+  ]),
+];
+MODULES.eng2.thinkGens=[
+  poolGen('🧠 문장으로 생각',[
+    {q:'"I have a cat"의 뜻은?', c:'나는 고양이가 있어', w:['나는 고양이가 무서워','고양이가 노래해','나는 모자가 있어'], h:'have = 가지고 있다!'},
+    {q:'"Thank you!"에 어울리는 대답은?', c:'You are welcome! (천만에)', w:['Sorry!','Good night!','One two three!'], h:'고마워 ↔ 천만에!'},
+    {q:'아침에 만난 친구에게 어울리는 인사는?', c:'Good morning!', w:['Good night!','Goodbye!','Sorry!'], h:'morning = 아침!'},
+    {q:'"two dogs"의 뜻은?', c:'개 두 마리', w:['개 한 마리','고양이 두 마리','큰 개'], h:'two = 2!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"red는 파란색이야"', w:['"blue는 파란색이야"','"dog는 개야"','"ten은 10이야"'], h:'red는 빨강!'},
+    {q:'외국 친구가 "Hello!"라고 하면?', c:'"Hello!" 하고 반갑게 받아 준다', w:['모른 척한다','도망간다','"Goodbye"라고 한다'], h:'인사는 주고받는 것!'},
+    {q:'영어 단어를 잘 기억하는 방법은?', c:'그림·소리와 함께 자주 만나기', w:['딱 한 번 보고 끝내기','뜻을 절대 안 보기','베껴 쓰기만 하기'], h:'여러 번, 재미있게!'},
+  ]),
+];
+MODULES.sci1.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'냉장고 문에 자석을 넣은 까닭은?', c:'문이 저절로 착! 닫히게 하려고', w:['문을 무겁게 하려고','소리를 내려고','안을 차갑게 하려고'], h:'끌어당기는 힘을 이용!'},
+    {q:'모래에 섞인 클립을 빨리 골라내려면?', c:'자석을 넣었다 뺀다', w:['물을 붓는다','입으로 분다','하나씩 손으로 집는다'], h:'클립은 철!'},
+    {q:'나침반이 산속에서 특히 유용한 까닭은?', c:'전기 없이도 방향을 알려 줘서', w:['빛이 나서','소리가 나서','지도를 그려 줘서'], h:'N극은 언제나 북쪽!'},
+    {q:'필통 뚜껑, 가방 똑딱이가 착 닫히는 공통 비밀은?', c:'자석의 끌어당기는 힘', w:['용수철','접착풀','전기'], h:'생활 속 자석!'},
+  ]),
+  poolGen('🔄 오개념·실험',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"자석은 모든 금속에 붙어"', w:['"자석은 철에 붙어"','"같은 극은 서로 밀어내"','"나침반 바늘은 자석이야"'], h:'알루미늄·구리는 안 붙어!'},
+    {q:'자석 기차 장난감이 서로 밀려나기만 할 때는?', c:'같은 극끼리 마주 보고 있을 때', w:['배터리가 없을 때','너무 가벼울 때','색이 다를 때'], h:'N-N, S-S는 밀어내!'},
+    {q:'자석을 클립에 가까이 하자 클립이 점프해서 붙었어! 알 수 있는 것은?', c:'자석의 힘은 닿지 않아도 작용한다', w:['클립이 살아 있다','바람이 불었다','책상이 기울었다'], h:'떨어져 있어도 끌어당겨!'},
+  ]),
+];
+MODULES.sci2.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'물고기가 알을 아주 많이 낳는 까닭은?', c:'살아남는 새끼가 적어서 많이 낳는다', w:['심심해서','물이 많아서','알이 예뻐서'], h:'자연의 생존 전략!'},
+    {q:'애벌레가 잎 뒤에 숨는 까닭은?', c:'새 같은 천적에게 잡아먹히지 않으려고', w:['햇빛이 싫어서만','잎이 맛없어서','길을 잃어서'], h:'살아남기 위한 지혜!'},
+    {q:'번데기 속에서는 무슨 일이 일어날까?', c:'나비의 몸으로 바뀌는 큰 변신 중', w:['그냥 잠만 잔다','아무 일도 없다','점점 작아진다'], h:'겉은 조용, 속은 대변신!'},
+    {q:'동물마다 한살이가 다른 까닭은?', c:'사는 곳과 살아가는 방식이 달라서', w:['크기 때문만','색깔 때문에','순전히 우연'], h:'물속·땅 위·하늘!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"올챙이는 앞다리가 먼저 나와"', w:['"개구리는 알을 낳아"','"병아리는 커서 닭이 돼"','"나비는 번데기를 거쳐"'], h:'뒷다리가 먼저!'},
+    {q:'사람의 한살이로 맞는 순서는?', c:'아기 → 어린이 → 청소년 → 어른', w:['어른 → 아기 → 어린이 → 청소년','아기 → 어른 → 어린이 → 청소년','청소년 → 아기 → 어른 → 어린이'], h:'우리도 한살이가 있어!'},
+    {q:'강아지와 송아지의 공통점은?', c:'어미젖을 먹고 자란다', w:['알에서 태어난다','번데기가 된다','아가미로 숨 쉰다'], h:'새끼로 태어나는 동물!'},
+  ]),
+];
+MODULES.soc1.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'교통이 발달하면 우리 생활은 어떻게 변할까?', c:'멀리 사는 사람도 자주 만날 수 있다', w:['집 밖에 못 나가게 된다','모든 것이 느려진다','아무 변화가 없다'], h:'제주도도 하루 만에!'},
+    {q:'옛날 도구를 박물관에 보관하는 까닭은?', c:'조상들의 생활 모습을 배울 수 있어서', w:['버리기 아까워서','비싸게 팔려고','자리가 남아서'], h:'도구에는 역사가 담겨 있어!'},
+    {q:'봉수대가 산꼭대기에 있던 까닭은?', c:'불과 연기가 멀리서도 잘 보이게 하려고', w:['공기가 좋아서','산이 따뜻해서','내려오기 귀찮아서'], h:'높을수록 멀리 보여!'},
+    {q:'통신의 발달이 생명을 구하기도 하는 까닭은?', c:'위급할 때 소식을 바로 전할 수 있어서', w:['전화기가 단단해서','통신비가 싸서','벨소리가 커서'], h:'119 신고도 통신!'},
+  ]),
+  poolGen('🔄 오개념·상상',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"옛날 사람들은 게을러서 느린 도구를 썼어"', w:['"도구는 점점 편리해졌어"','"가마솥은 전기밥솥이 됐어"','"봉수는 불과 연기로 소식을 전했어"'], h:'그 시대 최선의 발명품이었어!'},
+    {q:'미래의 교통수단으로 어울리는 상상은?', c:'하늘을 나는 자율주행 택시', w:['다시 가마로만 다니기','교통수단 모두 없애기','말만 타고 다니기'], h:'상상이 미래를 만들어!'},
+    {q:'전기가 없던 시절, 깜깜한 밤에 책을 읽으려면?', c:'호롱불을 켰다', w:['휴대폰 손전등을 켰다','LED 스탠드를 켰다','TV를 켰다'], h:'옛날 도구를 떠올려!'},
+  ]),
+];
+MODULES.soc2.thinkGens=[
+  poolGen('🧠 왜 그럴까',[
+    {q:'소방서가 없다면 어떤 일이 생길까?', c:'불이 나도 끌 사람이 없어 큰 피해가 난다', w:['아무 일도 없다','불이 안 나게 된다','집이 더 안전해진다'], h:'공공기관의 소중함!'},
+    {q:'지도에 기호를 쓰는 까닭은?', c:'좁은 지도에 많은 정보를 간단히 담으려고', w:['그림 실력이 없어서','어른만 보라고','예쁘게 꾸미려고'], h:'학교를 매번 그릴 순 없잖아!'},
+    {q:'공공기관 이용료가 거의 없는 까닭은?', c:'모두를 위해 세금으로 운영되어서', w:['공짜를 좋아해서','직원이 없어서','돈이 필요 없는 곳이라서'], h:'우리 모두의 것!'},
+    {q:'도서관에서 조용히 해야 하는 까닭은?', c:'다른 사람의 책 읽기를 방해하지 않으려고', w:['사서 선생님이 무서워서','책이 놀라서','이유 없이 정한 규칙이라서'], h:'서로를 위한 배려!'},
+  ]),
+  poolGen('🔄 오개념·적용',[
+    {q:'<b>잘못</b> 말한 친구는?', c:'"112는 불이 났을 때 누르는 번호야"', w:['"119는 불·구급 신고 번호야"','"우체국에서 편지를 보내"','"보건소는 건강을 지켜 줘"'], h:'112는 경찰, 119는 소방!'},
+    {q:'우리 고장 지도를 만들 때 꼭 필요한 두 가지는?', c:'방위표와 기호', w:['연예인 사진과 스티커','게임 아이템','과자 이름 목록'], h:'지도의 약속!'},
+    {q:'길을 잃었을 때 가장 좋은 행동은?', c:'경찰관이나 가게 어른께 도움을 청한다', w:['아무나 따라간다','무작정 계속 걷는다','그 자리에서 울기만 한다'], h:'도움 요청은 용감한 행동!'},
   ]),
 ];
 
