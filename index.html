@@ -158,6 +158,15 @@
   .match-card.sel{border-color:var(--c); background:var(--bg); transform:scale(1.05);}
   .match-card.done{border-color:#19a974; background:#e7f9f1; color:#0e7d57;}
 
+  /* 분류 게임 */
+  .sort-item{font-size:24px; font-weight:900; text-align:center; background:var(--bg); border:3px dashed color-mix(in srgb,var(--c) 45%, white); border-radius:16px; padding:20px 10px; margin-top:10px;}
+  .bucket-row{display:flex; gap:10px; margin-top:14px;}
+  .bucket{flex:1; padding:18px 8px; border-radius:18px; font-weight:900; font-size:15.5px; border:3px solid #eee; background:#fff; box-shadow:0 3px 8px rgba(0,0,0,.06); color:var(--ink);}
+  .bucket:active{transform:scale(.96); background:var(--bg);}
+
+  /* 알파벳 순서 게임 */
+  .alpha-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
+
   /* 과목 구분 */
   .subj-head{display:flex; align-items:center; gap:7px; font-size:17px; font-weight:900; margin:18px 2px 2px;}
   .subj-head .line{flex:1; height:2px; background:#eee; border-radius:2px;}
@@ -231,20 +240,20 @@ const SUBJECTS=[
   {id:'soc',  name:'사회', emoji:'🏘️'},
 ];
 const UNITS = [
-  {id:'mul',  subj:'math', emoji:'🐸', name:'곱셈',        sub:'몇 배로 늘어나기',  c:'#ff9f43', cd:'#e67e22'},
-  {id:'div',  subj:'math', emoji:'🍪', name:'나눗셈',      sub:'똑같이 나누기',     c:'#ee5253', cd:'#c0392b'},
-  {id:'frac', subj:'math', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f'},
-  {id:'len',  subj:'math', emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6'},
-  {id:'cap',  subj:'math', emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf'},
-  {id:'kor1', subj:'kor',  emoji:'✏️', name:'맞춤법 달인', sub:'헷갈리는 말 정복',  c:'#f368e0', cd:'#c23593'},
-  {id:'kor2', subj:'kor',  emoji:'🔄', name:'반대말·비슷한말', sub:'낱말의 짝꿍 찾기', c:'#ff6b81', cd:'#d63050'},
-  {id:'kor3', subj:'kor',  emoji:'🙇', name:'높임말 예절', sub:'어른께 바르게 말하기', c:'#a55eea', cd:'#8043c9'},
-  {id:'eng1', subj:'eng',  emoji:'🔤', name:'알파벳',      sub:'ABC와 첫소리',      c:'#54a0ff', cd:'#2e6fd1'},
-  {id:'eng2', subj:'eng',  emoji:'🦁', name:'영어 단어',   sub:'동물·색깔·인사',    c:'#3aa6dd', cd:'#2380b5'},
-  {id:'sci1', subj:'sci',  emoji:'🧲', name:'자석',        sub:'밀고 당기는 힘',    c:'#1dd1a1', cd:'#0e9c77'},
-  {id:'sci2', subj:'sci',  emoji:'🦋', name:'동물의 한살이', sub:'알에서 어른까지',  c:'#6ab04c', cd:'#4f8a39'},
-  {id:'soc1', subj:'soc',  emoji:'🏺', name:'옛날과 오늘날', sub:'교통·통신·도구',   c:'#cc8e35', cd:'#a36b1f'},
-  {id:'soc2', subj:'soc',  emoji:'🗺️', name:'우리 고장',   sub:'장소와 지도',       c:'#778beb', cd:'#5868c9'},
+  {id:'mul',  subj:'math', emoji:'🐸', name:'곱셈',        sub:'몇 배로 늘어나기',  c:'#ff9f43', cd:'#e67e22', gname:'그림게임'},
+  {id:'div',  subj:'math', emoji:'🍪', name:'나눗셈',      sub:'똑같이 나누기',     c:'#ee5253', cd:'#c0392b', gname:'그림게임'},
+  {id:'frac', subj:'math', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f', gname:'그림게임'},
+  {id:'len',  subj:'math', emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6', gname:'그림게임'},
+  {id:'cap',  subj:'math', emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf', gname:'그림게임'},
+  {id:'kor1', subj:'kor',  emoji:'✏️', name:'맞춤법 달인', sub:'헷갈리는 말 정복',  c:'#f368e0', cd:'#c23593', gname:'낱말게임'},
+  {id:'kor2', subj:'kor',  emoji:'🔄', name:'반대말·비슷한말', sub:'낱말의 짝꿍 찾기', c:'#ff6b81', cd:'#d63050', gname:'낱말게임'},
+  {id:'kor3', subj:'kor',  emoji:'🙇', name:'높임말 예절', sub:'어른께 바르게 말하기', c:'#a55eea', cd:'#8043c9', gname:'낱말게임'},
+  {id:'eng1', subj:'eng',  emoji:'🔤', name:'알파벳',      sub:'ABC와 첫소리',      c:'#54a0ff', cd:'#2e6fd1', gname:'알파벳게임'},
+  {id:'eng2', subj:'eng',  emoji:'🦁', name:'영어 단어',   sub:'동물·색깔·인사',    c:'#3aa6dd', cd:'#2380b5', gname:'단어게임'},
+  {id:'sci1', subj:'sci',  emoji:'🧲', name:'자석',        sub:'밀고 당기는 힘',    c:'#1dd1a1', cd:'#0e9c77', gname:'분류게임'},
+  {id:'sci2', subj:'sci',  emoji:'🦋', name:'동물의 한살이', sub:'알에서 어른까지',  c:'#6ab04c', cd:'#4f8a39', gname:'분류게임'},
+  {id:'soc1', subj:'soc',  emoji:'🏺', name:'옛날과 오늘날', sub:'교통·통신·도구',   c:'#cc8e35', cd:'#a36b1f', gname:'분류게임'},
+  {id:'soc2', subj:'soc',  emoji:'🗺️', name:'우리 고장',   sub:'장소와 지도',       c:'#778beb', cd:'#5868c9', gname:'분류게임'},
 ];
 
 const $ = (s,el=document)=>el.querySelector(s);
@@ -260,8 +269,8 @@ function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 /* ===================== 저장 (on-device) ===================== */
 const SKEY='riwon_math_v2';
 let DB=loadDB();
-function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, created:Date.now()}; }
-function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; return d; } }catch(e){} return freshDB(); }
+function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,bank:true,review:true,deep:true}, created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; return d; } }catch(e){} return freshDB(); }
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
@@ -386,6 +395,7 @@ function sfx(kind){
   }catch(e){}
 }
 function toggleMute(){ DB.muted=!DB.muted; saveDB(); home(); }
+function toggleStage(k){ DB.stages[k]=!DB.stages[k]; saveDB(); renderDashboard(); }
 
 /* ===================== 공부 시간 시계 ===================== */
 let studyTick=null;
@@ -434,15 +444,26 @@ let curUnit=null, curStage='concept';
 function openUnit(id){ curUnit=UNITS.find(u=>u.id===id); curStage='concept'; setTheme(curUnit); renderUnit(); }
 function setStage(s){ curStage=s; clearTimers(); PLAY=null; renderUnit(); }
 
+function unitStages(u){
+  const defs=[
+    {id:'concept', t:'개념'},
+    {id:'game',    t:u.gname||'게임', opt:'game'},
+    {id:'quiz',    t:'퀴즈'},
+    {id:'bank',    t:'문제은행', opt:'bank'},
+    {id:'review',  t:'복습·분석', opt:'review'},
+    {id:'deep',    t:'🚀 심화', opt:'deep'},
+  ];
+  return defs.filter(s=>{
+    if(s.opt && DB.stages[s.opt]===false) return false;
+    if(s.id==='game' && !(MODULES[u.id].games&&MODULES[u.id].games.length)) return false;
+    if(s.id==='deep' && !MODULES[u.id].deepGens) return false;
+    return true;
+  }).map((s,i)=>Object.assign({}, s, {n:'STEP '+(i+1)}));
+}
 function renderUnit(){
   const u=curUnit; startStudyClock();
-  const stages=[
-    {id:'concept', t:'개념',     n:'STEP 1'},
-    {id:'game',    t:'그림게임', n:'STEP 2'},
-    {id:'quiz',    t:'퀴즈',     n:'STEP 3'},
-    {id:'bank',    t:'문제은행', n:'STEP 4'},
-    {id:'review',  t:'복습·분석', n:'STEP 5'},
-  ];
+  const stages=unitStages(u);
+  if(!stages.some(s=>s.id===curStage)) curStage='concept';
   app.innerHTML=`
     <div class="topbar">
       <button class="back" onclick="home()">←</button>
@@ -461,6 +482,7 @@ function renderUnit(){
   else if(curStage==='quiz') startMaster(u.id,body);
   else if(curStage==='bank') startBank(u.id,body);
   else if(curStage==='review') renderReview(body,u.id);
+  else if(curStage==='deep') startMaster(u.id,body,true);
 }
 
 /* 그림게임 서브탭 */
@@ -486,17 +508,18 @@ function pickGen(unitId){
   for(let i=0;i<gens.length;i++){ r-=w[i]; if(r<=0) return gens[i]; }
   return gens[gens.length-1];
 }
-function buildMasterSet(unitId){
-  const gens=MODULES[unitId].gens, set=[];
-  gens.forEach(g=>{ set.push(genOne(unitId,g)); set.push(genOne(unitId,g)); });
+function buildMasterSet(unitId, deep){
+  const gens=deep? MODULES[unitId].deepGens : MODULES[unitId].gens;
+  const per=gens.length>=4?2:3, set=[];
+  gens.forEach(g=>{ for(let k=0;k<per;k++) set.push(genOne(unitId,g)); });
   return shuffle(set).slice(0, Math.min(14, set.length));
 }
 
 /* ===================== 플레이 엔진 ===================== */
 let PLAY=null;
-function startMaster(unitId,body){
-  const set=buildMasterSet(unitId); set.forEach((s,i)=>s.id=i);
-  PLAY={mode:'master',unitId,body,queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
+function startMaster(unitId,body,deep){
+  const set=buildMasterSet(unitId,deep); set.forEach((s,i)=>s.id=i);
+  PLAY={mode:'master',unitId,body,deep:!!deep,queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
   advance();
 }
 function startBank(unitId,body){
@@ -622,10 +645,19 @@ function rewardCardHTML(newCards){
 }
 function finishMaster(){
   const P=PLAY; P.cur=null; const ud=unitDB(P.unitId);
-  const reward=rewardForClear(ud.clears); ud.clears++;
-  addStickers(reward); logEvent(P.unitId,'clear',1);
+  let reward, subText;
+  if(P.deep){
+    ud.deepClears=(ud.deepClears||0)+1;
+    reward=rewardForClear(ud.deepClears-1)+2;
+    logEvent(P.unitId,'deep',1);
+    subText='심화 보너스 +2 포함! 어려운 걸 해낸 거야 🚀';
+  } else {
+    reward=rewardForClear(ud.clears); ud.clears++;
+    logEvent(P.unitId,'clear',1);
+    subText=ud.clears>=CLEAR_REWARD.length?'다음 클리어도 +1 (이제 새 단원에 도전!)':'다음 클리어는 +'+rewardForClear(ud.clears)+' — 너무 같은 것만 반복하지 말고 새 단원도!';
+  }
+  addStickers(reward);
   const newCards=checkCardUnlocks(); saveDB();
-  const nextR=rewardForClear(ud.clears);
   let stars,msg;
   if(P.retry===0){ stars='⭐⭐⭐'; msg='한 번도 안 틀렸어요! 완벽해요!'; }
   else if(P.retry<=3){ stars='⭐⭐'; msg='거의 다 맞혔어요. 정말 잘했어요!'; }
@@ -633,10 +665,10 @@ function finishMaster(){
   confetti(true); sfx('win'); idolPopup(pick(LINES.clear), true);
   P.body.innerHTML=`
     <div class="result card">
-      <div class="stars">${stars}</div>
-      <h2>${curUnit.name} 퀴즈 클리어!</h2>
+      <div class="stars">${P.deep?'🚀'+stars:stars}</div>
+      <h2>${curUnit.name} ${P.deep?'심화':'퀴즈'} 클리어!</h2>
       <div class="msg">${msg}</div>
-      <div class="reward-banner">🎟️ 스티커 +${reward}!<br><span style="font-size:13px;font-weight:700;color:var(--soft)">${ud.clears>=CLEAR_REWARD.length?'다음 클리어도 +1 (이제 새 단원에 도전!)':'다음 클리어는 +'+nextR+' — 너무 같은 것만 반복하지 말고 새 단원도!'}</span></div>
+      <div class="reward-banner">🎟️ 스티커 +${reward}!<br><span style="font-size:13px;font-weight:700;color:var(--soft)">${subText}</span></div>
       ${rewardCardHTML(newCards)}
       <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 다시 푼 문제 ${P.retry}개</span></div>
       <button class="bigbtn" onclick="setStage('bank')">🏦 문제은행에서 더 풀기</button>
@@ -710,14 +742,14 @@ function renderReview(body,unitId){
 /* ===================== 부모용 대시보드 ===================== */
 function fmtTime(s){ const m=Math.floor(s/60), h=Math.floor(m/60); return h>0?`${h}시간 ${m%60}분`:`${m}분`; }
 function fmtAgo(t){ const d=Date.now()-t, mi=Math.floor(d/60000); if(mi<1)return '방금'; if(mi<60)return mi+'분 전'; const h=Math.floor(mi/60); if(h<24)return h+'시간 전'; return Math.floor(h/24)+'일 전'; }
-const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습'};
+const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습', deep:'🚀 심화 클리어'};
 function renderDashboard(){
   stopStudyClock(); setTheme(null);
   const acc=DB.totalSolved?Math.round(DB.totalCorrect/DB.totalSolved*100):0;
   let unitRows=UNITS.map(u=>{ const d=unitDB(u.id); const a=d.solved?Math.round(d.correct/d.solved*100):0;
     return `<div class="cat-row"><div class="lab"><span>${u.emoji} ${u.name}</span><span>${d.solved}문제 · ${a}%</span></div>
       <div class="progress" style="height:11px;margin:4px 0 2px"><div class="bar" style="width:${a}%"></div></div>
-      <div class="sub">클리어 🏆 ${d.clears}회 · 문제은행 ${d.bank} · 복습 ${d.review}</div></div>`; }).join('');
+      <div class="sub">클리어 🏆 ${d.clears} · 심화 🚀 ${d.deepClears||0} · 문제은행 ${d.bank} · 복습 ${d.review}</div></div>`; }).join('');
   // 전체 약점 유형 top3
   const all=[]; UNITS.forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) all.push({u:u.name,c,w:cats[c].wrong}); } });
   all.sort((a,b)=>b.w-a.w);
@@ -739,6 +771,14 @@ function renderDashboard(){
     <div class="card"><h3>📚 단원별 공부량</h3>${unitRows}</div>
     <div class="card"><h3>🔎 더 연습이 필요한 유형</h3><div style="display:flex;flex-wrap:wrap">${weak}</div></div>
     <div class="card"><h3>🕒 최근 활동</h3>${logs}</div>
+    <div class="card">
+      <h3>🛠️ 단계 설정 (부모용)</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 수준에 맞게 단계를 켜고 꺼요. 끈 단계는 화면에서 사라지고 번호가 다시 매겨져요. (개념·퀴즈는 항상 보여요)</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${[['game','🎮 게임 단계'],['bank','🏦 문제은행'],['review','📘 복습·분석'],['deep','🚀 심화']].map(([k,t])=>
+          `<button class="wpill" style="${DB.stages[k]?'border-color:var(--c);color:var(--c-dark)':'opacity:.45'}" onclick="toggleStage('${k}')">${DB.stages[k]?'✅':'⬜'} ${t}</button>`).join('')}
+      </div>
+    </div>
     <div class="card" style="text-align:center">
       <button class="bigbtn ghost" onclick="renderGallery()">🎴 카드 모음 보기</button>
       <button class="bigbtn ghost" onclick="exportData()">💾 백업 저장하기</button>
@@ -1427,6 +1467,72 @@ function mtTap(i){
   }
 }
 
+/* ===== 분류 게임 (이거냐 저거냐) ===== */
+function sortGame(items, labA, labB, tip){
+  return function(host){ window._sgData={items,labA,labB,tip,host}; sgReset(); };
+}
+function sgReset(){
+  const D=window._sgData;
+  window._sg={list:shuffle(D.items), i:0, miss:0};
+  sgDraw();
+}
+function sgDraw(){
+  const D=window._sgData, S=window._sg, it=S.list[S.i];
+  D.host.innerHTML=`<div class="card">
+    <p class="cg-tip">${D.tip}</p>
+    <div class="progress" style="height:12px"><div class="bar" style="width:${Math.round(S.i/S.list.length*100)}%"></div></div>
+    <div class="sort-item">${it[0]}</div>
+    <div class="bucket-row">
+      <button class="bucket" onclick="sgPick(0)">${D.labA}</button>
+      <button class="bucket" onclick="sgPick(1)">${D.labB}</button>
+    </div>
+    <p style="text-align:center;font-weight:800;min-height:22px;margin:10px 0 0" id="sg-msg"></p>
+  </div>`;
+}
+function sgPick(b){
+  const D=window._sgData, S=window._sg, it=S.list[S.i];
+  if(b===it[1]){
+    sfx('ok'); S.i++;
+    if(S.i>=S.list.length){
+      confetti(false); sfx('win');
+      D.host.innerHTML=`<div class="card" style="text-align:center"><div style="font-size:42px">🎉</div>
+        <h3 style="justify-content:center">전부 다 분류했다!</h3>
+        <p style="margin:6px 0 0">틀린 횟수: <b>${S.miss}</b>번 ${S.miss===0?'— 완벽해요!':'— 다시 하면 0번 가능!'}</p>
+        <button class="bigbtn" style="margin-top:14px" onclick="sgReset()">🔀 다시 하기</button></div>`;
+      return;
+    }
+    sgDraw();
+  } else {
+    S.miss++; sfx('no');
+    const m=document.getElementById('sg-msg'); if(m)m.textContent='음~ 다시 생각해 봐! 🤔';
+  }
+}
+
+/* ===== 알파벳 순서 게임 ===== */
+function alphaOrderGame(host){ window._ogHost=host; ogReset(); }
+function ogReset(){
+  const start=rnd(0,18);
+  const seq=[]; for(let i=0;i<8;i++) seq.push(String.fromCharCode(65+start+i));
+  window._og={seq, disp:shuffle(seq), next:0};
+  const O=window._og;
+  window._ogHost.innerHTML=`<div class="card">
+    <p class="cg-tip">🔠 <b>${seq[0]}</b>부터 알파벳 순서대로 눌러봐!</p>
+    <div class="alpha-grid">${O.disp.map((L,i)=>`<button class="match-card" style="font-size:22px;min-height:54px" id="og${i}" onclick="ogTap(${i})">${L}</button>`).join('')}</div>
+    <p style="text-align:center;font-weight:800;min-height:22px;margin:10px 0 0" id="og-msg"></p>
+    <button class="bigbtn ghost" style="margin-top:10px" onclick="ogReset()">🔀 다시 섞기</button>
+  </div>`;
+}
+function ogTap(i){
+  const O=window._og, el=document.getElementById('og'+i);
+  if(!el||el.classList.contains('done'))return;
+  const m=document.getElementById('og-msg');
+  if(O.disp[i]===O.seq[O.next]){
+    el.classList.add('done'); O.next++; sfx('ok');
+    if(O.next>=O.seq.length){ confetti(false); sfx('win'); if(m)m.textContent='완벽한 순서! 🎉'; }
+    else if(m) m.textContent='';
+  } else { sfx('no'); if(m)m.textContent='지금은 '+O.seq[O.next]+' 차례야!'; }
+}
+
 /* =========================================================
    📖 국어
    ========================================================= */
@@ -1451,7 +1557,11 @@ MODULES.kor1={
   games:[{name:'🃏 낱말 짝맞추기', build:matchGame([
     ['가르치다','지식을 알려 주다'],['가리키다','방향을 알리다'],['다르다','서로 같지 않다'],['틀리다','답이 맞지 않다'],
     ['잃어버리다','물건이 없어지다'],['잊어버리다','기억이 안 나다'],['작다','크기가 안 크다'],['적다','양이 안 많다']
-  ],'🍀 뜻이 맞는 짝을 찾아요!')}],
+  ],'🍀 뜻이 맞는 짝을 찾아요!')},
+  {name:'⭕❌ 바른말 찾기', build:sortGame([
+    ['며칠',0],['몇일',1],['깨끗이',0],['깨끗히',1],['역할',0],['역활',1],
+    ['떡볶이',0],['떡복이',1],['찌개',0],['찌게',1],['금세',0],['금새',1]
+  ],'⭕ 바른 말','❌ 틀린 말','✏️ 바르게 쓴 말일까, 틀리게 쓴 말일까?')}],
   gens:[
     poolGen('바른 글자',[
       {q:'친구를 정말 (___)에 만났어!', c:'오랜만', w:['오랫만','오랜맏','올해만'], h:'"오래간만"을 줄인 말이라 오랜만!'},
@@ -1503,7 +1613,11 @@ MODULES.kor2={
   games:[{name:'🃏 반대말 짝맞추기', build:matchGame([
     ['크다','작다'],['높다','낮다'],['길다','짧다'],['무겁다','가볍다'],
     ['빠르다','느리다'],['밝다','어둡다'],['덥다','춥다'],['열다','닫다']
-  ],'🔄 반대말 짝을 찾아요!')}],
+  ],'🔄 반대말 짝을 찾아요!')},
+  {name:'🔊💃 흉내말 분류', build:sortGame([
+    ['멍멍',0],['삐악삐악',0],['주룩주룩',0],['우르릉',0],['쨍그랑',0],
+    ['깡충깡충',1],['반짝반짝',1],['엉금엉금',1],['뒤뚱뒤뚱',1],['데굴데굴',1]
+  ],'🔊 소리 흉내','💃 모양 흉내','소리를 흉내냈을까, 모양을 흉내냈을까?')}],
   gens:[
     poolGen('반대말',[
       {q:'"크다"의 반대말은?', c:'작다', w:['낮다','짧다','어둡다'], h:'크기의 반대를 생각해요!'},
@@ -1551,7 +1665,11 @@ MODULES.kor3={
   games:[{name:'🃏 높임말 짝맞추기', build:matchGame([
     ['밥','진지'],['집','댁'],['말','말씀'],['나이','연세'],
     ['생일','생신'],['자다','주무시다'],['먹다','드시다'],['있다','계시다']
-  ],'🙇 보통말과 높임말 짝을 찾아요!')}],
+  ],'🙇 보통말과 높임말 짝을 찾아요!')},
+  {name:'🙇🙂 높임말 분류', build:sortGame([
+    ['진지',0],['말씀',0],['연세',0],['생신',0],['주무시다',0],['계시다',0],
+    ['밥',1],['말',1],['나이',1],['생일',1],['자다',1],['있다',1]
+  ],'🙇 높임말','🙂 보통말','높임말일까, 보통말일까?')}],
   gens:[
     poolGen('높임 낱말',[
       {q:'"밥"의 높임말은?', c:'진지', w:['식사','먹이','밥상'], h:'할머니, ___ 잡수세요!'},
@@ -1599,7 +1717,8 @@ MODULES.eng1={
   },
   games:[{name:'🃏 대문자·소문자 짝', build:matchGame([
     ['A','a'],['B','b'],['D','d'],['E','e'],['G','g'],['Q','q'],['R','r'],['N','n']
-  ],'🔤 대문자와 소문자 짝을 찾아요!')}],
+  ],'🔤 대문자와 소문자 짝을 찾아요!')},
+  {name:'🔠 순서게임', build:alphaOrderGame}],
   gens:[
     poolGen('소문자 찾기',[
       {q:'대문자 <b>B</b>의 소문자는?', c:'b', w:['d','p','q'], h:'b는 막대기 다음 배가 오른쪽!'},
@@ -1648,7 +1767,11 @@ MODULES.eng2={
   games:[{name:'🃏 단어 짝맞추기', build:matchGame([
     ['dog','개'],['cat','고양이'],['lion','사자'],['bear','곰'],
     ['red','빨강'],['blue','파랑'],['three','3'],['ten','10']
-  ],'🔤 영어 단어와 뜻을 짝지어요!')}],
+  ],'🔤 영어 단어와 뜻을 짝지어요!')},
+  {name:'🦁🌈 단어 분류', build:sortGame([
+    ['dog',0],['cat',0],['lion',0],['bear',0],['rabbit',0],['tiger',0],
+    ['red',1],['blue',1],['green',1],['yellow',1],['white',1],['black',1]
+  ],'🦁 동물','🌈 색깔','동물 단어일까, 색깔 단어일까?')}],
   gens:[
     poolGen('동물 단어',[
       {q:'<b>dog</b>의 뜻은?', c:'개', w:['고양이','곰','새'], h:'멍멍!'},
@@ -1699,7 +1822,11 @@ MODULES.sci1={
   games:[{name:'🃏 자석 짝맞추기', build:matchGame([
     ['같은 극','밀어내요'],['다른 극','끌어당겨요'],['N극','북쪽을 가리켜요'],
     ['나침반','방향 찾는 도구'],['철','자석에 붙어요'],['플라스틱','자석에 안 붙어요']
-  ],'🧲 자석 상식 짝을 찾아요!')}],
+  ],'🧲 자석 상식 짝을 찾아요!')},
+  {name:'🧲🚫 붙을까 분류', build:sortGame([
+    ['철 클립',0],['쇠못',0],['철 가위날',0],['철사',0],['쇠 옷핀',0],
+    ['지우개',1],['유리컵',1],['색종이',1],['고무줄',1],['플라스틱 자',1],['나무젓가락',1]
+  ],'🧲 붙어요','🚫 안 붙어요','자석에 붙을까, 안 붙을까?')}],
   gens:[
     poolGen('붙을까 안 붙을까',[
       {q:'자석에 붙는 것은?', c:'철 클립', w:['지우개','유리컵','나무젓가락'], h:'철로 된 것만 붙어요!'},
@@ -1741,7 +1868,11 @@ MODULES.sci2={
   games:[{name:'🃏 동물 짝맞추기', build:matchGame([
     ['개구리','올챙이'],['닭','병아리'],['나비','애벌레'],
     ['소','송아지'],['말','망아지'],['개','강아지']
-  ],'🦋 어른 동물과 아기를 짝지어요!')}],
+  ],'🦋 어른 동물과 아기를 짝지어요!')},
+  {name:'🥚🐣 알·새끼 분류', build:sortGame([
+    ['닭',0],['개구리',0],['배추흰나비',0],['거북',0],['연어',0],['잠자리',0],
+    ['개',1],['고양이',1],['소',1],['말',1],['토끼',1],['돼지',1]
+  ],'🥚 알을 낳아요','🐣 새끼를 낳아요','이 동물은 알로 태어날까, 새끼로 태어날까?')}],
   gens:[
     poolGen('한살이 순서',[
       {q:'배추흰나비: 알 → (___) → 번데기 → 나비', c:'애벌레', w:['올챙이','병아리','새끼 나비'], h:'알에서 꼬물꼬물 나오는 것!'},
@@ -1791,7 +1922,11 @@ MODULES.soc1={
   games:[{name:'🃏 옛날↔오늘날 짝', build:matchGame([
     ['가마솥','전기밥솥'],['빨래판','세탁기'],['호롱불','전등'],
     ['부채','선풍기'],['붓','연필·볼펜'],['봉수','휴대전화']
-  ],'🏺 옛날 도구와 오늘날 도구를 짝지어요!')}],
+  ],'🏺 옛날 도구와 오늘날 도구를 짝지어요!')},
+  {name:'🏺📱 옛날·오늘날 분류', build:sortGame([
+    ['가마',0],['봉수',0],['호롱불',0],['빨래판',0],['절구',0],['나룻배',0],
+    ['지하철',1],['휴대전화',1],['전등',1],['세탁기',1],['믹서',1],['비행기',1]
+  ],'🏺 옛날','📱 오늘날','옛날 것일까, 오늘날 것일까?')}],
   gens:[
     poolGen('교통수단',[
       {q:'옛날 사람들이 타던 것이 <b>아닌</b> 것은?', c:'지하철', w:['가마','말','돛단배'], h:'지하철은 오늘날의 것!'},
@@ -1831,7 +1966,11 @@ MODULES.soc2={
   games:[{name:'🃏 장소 짝맞추기', build:matchGame([
     ['우체국','편지·택배'],['소방서','불 끄기'],['도서관','책 빌리기'],
     ['경찰서','안전 지키기'],['시장','물건 사고팔기'],['보건소','아플 때 진료']
-  ],'🏘️ 장소와 하는 일을 짝지어요!')}],
+  ],'🏘️ 장소와 하는 일을 짝지어요!')},
+  {name:'🏛️🏪 공공기관 분류', build:sortGame([
+    ['소방서',0],['경찰서',0],['우체국',0],['보건소',0],['도서관',0],['주민센터',0],
+    ['문방구',1],['빵집',1],['장난감 가게',1],['분식집',1],['미용실',1],['마트',1]
+  ],'🏛️ 공공기관','🏪 가게','모두를 위한 공공기관일까, 개인 가게일까?')}],
   gens:[
     poolGen('고장의 장소',[
       {q:'편지와 택배를 보내는 곳은?', c:'우체국', w:['소방서','도서관','시장'], h:'우표를 붙여서!'},
@@ -1858,6 +1997,189 @@ MODULES.soc2={
     ]),
   ]
 };
+
+/* =========================================================
+   🚀 심화 과정 (STEP 6) — 단원별 어려운 문제 세트
+   ========================================================= */
+MODULES.mul.deepGens=[
+  {cat:'심화·세자리×한자리', make(){const a=rnd(112,329),b=rnd(2,4),h1=Math.floor(a/100)*100,h2=Math.floor(a%100/10)*10,h3=a%10;return{q:`${a} <span class="b">×</span> ${b} = ?`,a:a*b,hint:`쪼개요! (${h1}×${b})+(${h2}×${b})+(${h3}×${b}) = ${h1*b}+${h2*b}+${h3*b}`};}},
+  {cat:'심화·두자리×두자리', make(){const a=rnd(12,29),b=rnd(11,19);return{q:`${a} <span class="b">×</span> ${b} = ?`,a:a*b,hint:`${a}×10=${a*10}, ${a}×${b-10}=${a*(b-10)}. 둘을 더해요!`};}},
+  {cat:'심화·곱셈 문장제', make(){const a=rnd(12,25),b=rnd(3,6);return{q:`한 상자에 ${a}개씩 ${b}상자면 모두 ? 개`,a:a*b,hint:`${a}×${b}를 계산해요.`};}},
+];
+MODULES.div.deepGens=[
+  {cat:'심화·몫 구하기', make(){const b=rnd(3,8),q2=rnd(3,9),r=rnd(1,b-1),a=b*q2+r;return{q:`${a} ÷ ${b} 의 <span class="b">몫</span>은?`,a:q2,hint:`${b}×${q2}=${b*q2}, ${r} 남아요. 몫은 ${q2}!`};}},
+  {cat:'심화·나머지 구하기', make(){const b=rnd(3,8),q2=rnd(3,9),r=rnd(1,b-1),a=b*q2+r;return{q:`${a} ÷ ${b} 의 <span class="b">나머지</span>는?`,a:r,hint:`${b}×${q2}=${b*q2}, ${a}-${b*q2}=${r}`};}},
+  {cat:'심화·나눗셈 문장제', make(){const b=rnd(3,6),q2=rnd(4,9),r=rnd(1,b-1),a=b*q2+r;return{q:`구슬 ${a}개를 ${b}명에게 똑같이 나누면 한 명당 ? 개 (남는 건 빼고)`,a:q2,hint:`몫을 구해요! ${b}×${q2}=${b*q2}`};}},
+];
+MODULES.frac.deepGens=[
+  {cat:'심화·같은 분모 비교', make(){const n=rnd(5,9);let x=rnd(1,n-1),y=rnd(1,n-1);while(y===x)y=rnd(1,n-1);return{q:`${x}/${n} 와 ${y}/${n} 중 더 큰 분수의 <span class="b">분자</span>는?`,a:Math.max(x,y),hint:`분모가 같으면 분자가 큰 쪽이 커요!`};}},
+  {cat:'심화·1 만들기', make(){const n=rnd(4,9),m=rnd(1,n-1);return{q:`${m}/${n} 에 ?/${n} 을 더하면 1! 분자만 입력`,a:n-m,hint:`1 = ${n}/${n} 이니까 ${n}-${m}!`};}},
+  {cat:'심화·가분수', make(){const n=rnd(2,5),k=rnd(1,3),m=n*k;return{q:`${m}/${n} 은 자연수로 얼마?`,a:k,hint:`${n}/${n}이 1! ${m}÷${n}=${k}`};}},
+];
+MODULES.len.deepGens=[
+  {cat:'심화·km↔m', make(){const k=rnd(2,9);return{q:`${k} km = ? <span class="b">m</span>`,a:k*1000,hint:`1km=1000m`};}},
+  {cat:'심화·km 복합', make(){const k=rnd(1,5),m=rnd(1,9)*100;return{q:`${k}km ${m}m = ? <span class="b">m</span>`,a:k*1000+m,hint:`${k*1000}+${m}`};}},
+  {cat:'심화·시간 복합', make(){const h=rnd(1,3),m=rnd(1,5)*10;return{q:`${h}시간 ${m}분 = ? <span class="b">분</span>`,a:h*60+m,hint:`${h}시간=${h*60}분, +${m}`};}},
+  {cat:'심화·거꾸로 시간', make(){const h=rnd(1,2),m=rnd(1,5)*10,t=h*60+m;return{q:`${t}분 = ${h}시간 ?<span class="b">분</span>`,a:m,hint:`${t}-${h*60}=${m}`};}},
+];
+MODULES.cap.deepGens=[
+  {cat:'심화·들이 덧셈', make(){const a=rnd(1,3),am=rnd(1,6)*100,b=rnd(1,2),bm=rnd(1,3)*100;return{q:`${a}L ${am}mL + ${b}L ${bm}mL = ? <span class="b">mL</span>`,a:(a+b)*1000+am+bm,hint:`모두 mL로! ${a*1000+am}+${b*1000+bm}`};}},
+  {cat:'심화·무게 뺄셈', make(){const a=rnd(2,4),g=rnd(2,9)*100;return{q:`${a}kg - ${g}g = ? <span class="b">g</span>`,a:a*1000-g,hint:`${a*1000}-${g}`};}},
+  {cat:'심화·들이 비교', make(){const l=rnd(2,5),ml=l*1000+rnd(1,9)*100;return{q:`${ml}mL 는 ${l}L보다 몇 <span class="b">mL</span> 더 많을까?`,a:ml-l*1000,hint:`${l}L=${l*1000}mL`};}},
+];
+MODULES.kor1.deepGens=[
+  poolGen('심화·틀린 말 찾기',[
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'역활', w:['며칠','깨끗이','찌개'], h:'"역할"이 바른 표기!'},
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'몇일', w:['오랜만','곰곰이','떡볶이'], h:'언제나 "며칠"!'},
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'금새', w:['금세','웬일','찌개'], h:'"금세"가 맞아요!'},
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'깨끗히', w:['깨끗이','곰곰이','똑똑히'], h:'깨끗"이"!'},
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'떡복이', w:['떡볶이','김밥','순대'], h:'볶다에서 온 떡볶이!'},
+    {q:'다음 중 <b>틀리게</b> 쓴 낱말은?', c:'왠일', w:['웬일','왠지','웬만큼'], h:'"어찌 된 일"은 웬일! ("왠"은 왠지에만)'},
+  ]),
+  poolGen('심화·바른 문장 고르기',[
+    {q:'바르게 쓴 문장은?', c:'숙제를 안 했어요.', w:['숙제를 않 했어요.','숙제를안했어요.','숙제를 앉 했어요.'], h:'"안"은 띄어 써요!'},
+    {q:'바르게 쓴 문장은?', c:'이제 가도 돼요.', w:['이제 가도 되요.','이제 가도 됀다.','이제 가도 됌.'], h:'"되어요"가 줄어 돼요!'},
+    {q:'바르게 쓴 문장은?', c:'그 답은 옳지 않아요.', w:['그 답은 옳지 안아요.','그 답은 옳치 않아요.','그 답은 올치 안나요.'], h:'-지 않다!'},
+    {q:'바르게 쓴 문장은?', c:'선생님이 길을 가리켰다.', w:['선생님이 길을 가르쳤다.','선생님이 길을 가르켰다.','선생님이 길을 갈켰다.'], h:'방향은 가리키다!'},
+    {q:'바르게 쓴 문장은?', c:'지우개를 잃어버렸다.', w:['지우개를 잊어버렸다.','지우개를 일러버렸다.','지우개를 잃어버렷다.'], h:'물건은 잃어버리다!'},
+    {q:'바르게 쓴 문장은?', c:'어른이 되면 의사가 되고 싶다.', w:['어른이 돼면 의사가 돼고 싶다.','어른이 되면 의사가 돼고 싶다.','어른이 됀면 의사가 되고 싶다.'], h:'"되어면/되어고"는 이상하죠? 그럼 되!'},
+  ]),
+];
+MODULES.kor2.deepGens=[
+  poolGen('심화·관용 표현',[
+    {q:'"발이 넓다"의 뜻은?', c:'아는 사람이 많다', w:['신발이 크다','걸음이 빠르다','발이 아프다'], h:'여기저기 아는 사람이 많을 때!'},
+    {q:'"귀가 얇다"의 뜻은?', c:'남의 말에 잘 넘어간다', w:['귀가 작다','소리를 잘 듣는다','귀가 차갑다'], h:'남이 말하면 금방 솔깃!'},
+    {q:'"손이 크다"의 뜻은?', c:'씀씀이가 넉넉하다', w:['장갑이 안 맞는다','힘이 세다','손가락이 길다'], h:'음식을 많이 차리는 사람!'},
+    {q:'"입이 무겁다"의 뜻은?', c:'비밀을 잘 지킨다', w:['말소리가 작다','입이 아프다','잘 안 먹는다'], h:'비밀을 함부로 말하지 않아요!'},
+    {q:'"배꼽을 잡다"의 뜻은?', c:'몹시 웃다', w:['배가 아프다','운동을 하다','밥을 많이 먹다'], h:'너무 웃겨서 데굴데굴!'},
+    {q:'"눈이 번쩍 뜨이다"의 뜻은?', c:'정신이 갑자기 들다', w:['눈이 아프다','잠이 온다','눈물이 난다'], h:'솔깃한 이야기를 들었을 때!'},
+  ]),
+  poolGen('심화·속담',[
+    {q:'티끌 모아 (___)', c:'태산', w:['바다','구름','동산'], h:'작은 것도 모이면 커져요!'},
+    {q:'소 잃고 (___) 고친다', c:'외양간', w:['지붕','대문','울타리'], h:'일이 벌어진 뒤에 후회!'},
+    {q:'낮말은 새가 듣고 밤말은 (___)가 듣는다', c:'쥐', w:['개','고양이','부엉이'], h:'말은 항상 조심!'},
+    {q:'가는 말이 고와야 (___) 말이 곱다', c:'오는', w:['받는','주는','새'], h:'내가 먼저 고운 말!'},
+    {q:'백지장도 (___) 낫다', c:'맞들면', w:['접으면','버리면','구기면'], h:'쉬운 일도 함께하면 더 쉬워요!'},
+    {q:'원숭이도 (___)에서 떨어진다', c:'나무', w:['지붕','산','하늘'], h:'잘하는 사람도 실수해요!'},
+  ]),
+];
+MODULES.kor3.deepGens=[
+  poolGen('심화·바른 높임 문장',[
+    {q:'완전히 바른 문장은?', c:'할머니께서 진지를 잡수신다.', w:['할머니가 진지를 먹는다.','할머니께서 밥을 먹는다.','할머니가 밥을 잡수신다.'], h:'께서+진지+잡수시다, 셋 다 높임!'},
+    {q:'완전히 바른 문장은?', c:'선생님께서 말씀하셨다.', w:['선생님이 말했다.','선생님께서 말했다.','선생님이 말씀했다.'], h:'께서+말씀+하셨다!'},
+    {q:'완전히 바른 문장은?', c:'아버지께 선물을 드렸다.', w:['아버지에게 선물을 줬다.','아버지께 선물을 줬다.','아버지에게 선물을 드렸다.'], h:'께+드리다!'},
+    {q:'완전히 바른 문장은?', c:'할아버지께서 댁에 계신다.', w:['할아버지가 집에 있다.','할아버지께서 집에 있다.','할아버지가 댁에 계신다.'], h:'께서+댁+계시다!'},
+    {q:'완전히 바른 문장은?', c:'어머니께 여쭤보고 결정할게.', w:['어머니께 물어보고 결정할게.','어머니에게 여쭤보고 결정할게.','어머니가 물어보고 결정할게.'], h:'께+여쭙다!'},
+  ]),
+  poolGen('심화·높임 고치기',[
+    {q:'"선생님이 왔다"를 바르게 고치면?', c:'선생님께서 오셨다', w:['선생님이 오셨다','선생님께서 왔다','선생님이 왔었다'], h:'께서 + -시- 둘 다!'},
+    {q:'"할머니가 잔다"를 바르게 고치면?', c:'할머니께서 주무신다', w:['할머니가 주무신다','할머니께서 잔다','할머니가 잠잔다'], h:'께서 + 주무시다!'},
+    {q:'"엄마에게 물어봤다"를 바르게 고치면?', c:'엄마께 여쭤봤다', w:['엄마에게 여쭤봤다','엄마께 물어봤다','엄마가 여쭤봤다'], h:'께 + 여쭙다!'},
+    {q:'"할아버지 나이가 많다"를 바르게 고치면?', c:'할아버지 연세가 많으시다', w:['할아버지 나이가 많으시다','할아버지 연세가 많다','할아버지 나이가 드셨다'], h:'연세 + -시-!'},
+    {q:'"선생님에게 줬다"를 바르게 고치면?', c:'선생님께 드렸다', w:['선생님에게 드렸다','선생님께 줬다','선생님이 드렸다'], h:'께 + 드리다!'},
+  ]),
+];
+MODULES.eng1.deepGens=[
+  poolGen('심화·빠진 알파벳',[
+    {q:'A B C <b>?</b> E — 빠진 글자는?', c:'D', w:['F','G','B'], h:'씨 다음은 디!'},
+    {q:'J K <b>?</b> M — 빠진 글자는?', c:'L', w:['N','I','O'], h:'케이 엘 엠!'},
+    {q:'O <b>?</b> Q R — 빠진 글자는?', c:'P', w:['S','N','T'], h:'오 피 큐!'},
+    {q:'U V <b>?</b> X — 빠진 글자는?', c:'W', w:['Y','T','Z'], h:'브이 더블유 엑스!'},
+    {q:'E <b>?</b> G H — 빠진 글자는?', c:'F', w:['D','I','J'], h:'이 에프 지!'},
+    {q:'R S <b>?</b> U — 빠진 글자는?', c:'T', w:['V','Q','W'], h:'에스 티 유!'},
+  ]),
+  poolGen('심화·모음과 자음',[
+    {q:'영어의 모음(a, e, i, o, u)이 <b>아닌</b> 것은?', c:'b', w:['a','e','o'], h:'모음은 a e i o u 다섯 개!'},
+    {q:'다음 중 <b>모음</b>은?', c:'i', w:['k','t','s'], h:'a e i o u!'},
+    {q:'다음 중 <b>모음</b>은?', c:'u', w:['v','w','n'], h:'a e i o u!'},
+    {q:'다음 중 모음이 <b>아닌</b> 것은?', c:'c', w:['e','i','u'], h:'c는 자음!'},
+    {q:'모음은 모두 몇 개?', c:'5개', w:['3개','7개','26개'], h:'a, e, i, o, u!'},
+  ]),
+];
+MODULES.eng2.deepGens=[
+  poolGen('심화·문장 빈칸',[
+    {q:'I have a (___). 멍멍! 🐶', c:'dog', w:['cat','fish','bird'], h:'멍멍 짖는 동물!'},
+    {q:'The banana is (___). 🍌', c:'yellow', w:['blue','red','black'], h:'바나나 색!'},
+    {q:'The sky is (___). ☁️', c:'blue', w:['green','pink','brown'], h:'하늘 색!'},
+    {q:'An apple is (___). 🍎', c:'red', w:['black','white','purple'], h:'사과 색!'},
+    {q:'I am (___) years old. (10살)', c:'ten', w:['two','five','six'], h:'10은 ten!'},
+    {q:'I see three (___). 🐱🐱🐱', c:'cats', w:['dogs','birds','pigs'], h:'야옹 세 마리!'},
+  ]),
+  poolGen('심화·가족과 몸',[
+    {q:'<b>mom</b>의 뜻은?', c:'엄마', w:['아빠','언니','이모'], h:'맘~'},
+    {q:'<b>dad</b>의 뜻은?', c:'아빠', w:['엄마','오빠','삼촌'], h:'대드!'},
+    {q:'<b>sister</b>의 뜻은?', c:'언니·여동생', w:['형·남동생','엄마','할머니'], h:'여자 형제!'},
+    {q:'<b>hand</b>의 뜻은?', c:'손', w:['발','머리','눈'], h:'박수 칠 때 쓰는 곳!'},
+    {q:'<b>eye</b>의 뜻은?', c:'눈', w:['코','입','귀'], h:'세상을 보는 곳!'},
+    {q:'"머리"는 영어로?', c:'head', w:['hand','leg','nose'], h:'헤드!'},
+  ]),
+];
+MODULES.sci1.deepGens=[
+  poolGen('심화·자석 원리',[
+    {q:'막대자석을 반으로 자르면?', c:'두 조각 다 N극과 S극이 생긴다', w:['N극만 남는다','S극만 남는다','자석이 아니게 된다'], h:'잘라도 항상 두 극이 같이!'},
+    {q:'자석에 붙였다 뗀 클립이 다른 클립을 끌어당기는 까닭은?', c:'클립이 잠시 자석의 성질을 띠어서', w:['클립이 가벼워서','손의 힘 때문에','클립이 뜨거워져서'], h:'자석을 닮아가요!'},
+    {q:'나침반 옆에 자석을 가까이 가져가면?', c:'바늘이 자석 쪽으로 움직인다', w:['아무 일도 없다','바늘이 부러진다','나침반이 뜨거워진다'], h:'바늘도 자석이니까!'},
+    {q:'자석 두 개 사이에 얇은 종이를 끼우면?', c:'그래도 서로 끌어당긴다', w:['힘이 완전히 사라진다','종이가 자석이 된다','서로 밀어낸다'], h:'자석의 힘은 종이를 통과해요!'},
+    {q:'우리가 사는 지구도 커다란 자석이라는 증거는?', c:'나침반 N극이 항상 북쪽을 가리켜서', w:['땅이 둥글어서','바다가 있어서','낮과 밤이 있어서'], h:'지구 자석이 나침반을 당겨요!'},
+  ]),
+  poolGen('심화·맞는 설명 찾기',[
+    {q:'자석에 대한 설명으로 <b>맞는</b> 것은?', c:'다른 극끼리는 끌어당긴다', w:['같은 극끼리는 끌어당긴다','플라스틱도 잘 붙는다','가운데가 가장 힘이 세다'], h:'N-S는 착!'},
+    {q:'자석에 대한 설명으로 <b>맞는</b> 것은?', c:'자석의 힘은 극에서 가장 세다', w:['자석은 모든 금속에 붙는다','자석은 물속에서 힘을 잃는다','자석은 항상 뜨겁다'], h:'양쪽 끝이 가장 힘세요!'},
+    {q:'자석에 대한 설명으로 <b>틀린</b> 것은?', c:'알루미늄 캔은 자석에 잘 붙는다', w:['철 클립은 자석에 붙는다','나침반 바늘은 자석이다','같은 극은 서로 밀어낸다'], h:'알루미늄은 안 붙어요!'},
+    {q:'철로 된 물건을 찾는 가장 좋은 방법은?', c:'자석을 대어 본다', w:['물에 띄워 본다','냄새를 맡아 본다','흔들어 본다'], h:'붙으면 철!'},
+    {q:'고리 자석 두 개를 막대에 끼웠더니 위 자석이 공중에 떠 있어요. 왜?', c:'같은 극끼리 밀어내서', w:['바람 때문에','자석이 가벼워서','막대가 밀어서'], h:'밀어내는 힘으로 둥둥!'},
+  ]),
+];
+MODULES.sci2.deepGens=[
+  poolGen('심화·탈바꿈',[
+    {q:'번데기 단계를 거치는 <b>완전탈바꿈</b> 곤충은?', c:'배추흰나비', w:['잠자리','메뚜기','매미'], h:'알→애벌레→번데기→나비!'},
+    {q:'번데기 없이 자라는 <b>불완전탈바꿈</b> 곤충은?', c:'잠자리', w:['배추흰나비','무당벌레','장수풍뎅이'], h:'잠자리는 애벌레에서 바로 어른!'},
+    {q:'곤충의 다리는 모두 몇 개?', c:'6개', w:['4개','8개','10개'], h:'곤충은 다리 여섯!'},
+    {q:'다리가 8개라서 곤충이 <b>아닌</b> 것은?', c:'거미', w:['개미','나비','메뚜기'], h:'거미는 다리 8개!'},
+    {q:'동물이 태어나 자라고 자손을 남기는 과정을 뭐라고 할까?', c:'한살이', w:['두살이','자람표','겨울잠'], h:'알에서 어른까지의 과정!'},
+    {q:'매미 애벌레가 오래 사는 곳은?', c:'땅속', w:['나뭇잎 위','물속','구름 위'], h:'땅속에서 몇 년을 살아요!'},
+  ]),
+  poolGen('심화·동물 상식',[
+    {q:'물과 땅을 오가며 사는 동물은?', c:'개구리', w:['고양이','참새','금붕어'], h:'어릴 땐 물속, 커서는 땅 위도!'},
+    {q:'새끼를 낳고 젖을 먹여 키우는 동물 무리는?', c:'포유류(젖먹이 동물)', w:['곤충','어류(물고기)','조류(새)'], h:'강아지·송아지처럼!'},
+    {q:'알을 품어서 부화시키는 동물은?', c:'닭', w:['상어','개구리','나비'], h:'어미가 알을 따뜻하게!'},
+    {q:'배추흰나비 애벌레의 먹이는?', c:'배춧잎', w:['꿀','고기','나무껍질'], h:'그래서 배추흰나비!'},
+    {q:'올챙이와 개구리의 숨쉬기 차이는?', c:'올챙이는 아가미, 개구리는 폐와 피부', w:['둘 다 코로만','둘 다 입으로만','숨을 안 쉰다'], h:'물속 vs 땅 위!'},
+  ]),
+];
+MODULES.soc1.deepGens=[
+  poolGen('심화·발달 순서',[
+    {q:'통신수단의 발달 순서로 맞는 것은?', c:'봉수 → 편지 → 전화 → 휴대전화', w:['휴대전화 → 봉수 → 전화 → 편지','전화 → 봉수 → 휴대전화 → 편지','편지 → 휴대전화 → 봉수 → 전화'], h:'옛날부터 차례대로!'},
+    {q:'교통수단의 발달 순서로 맞는 것은?', c:'말 → 증기 기관차 → 자동차 → 비행기', w:['비행기 → 말 → 자동차 → 기차','자동차 → 비행기 → 말 → 기차','말 → 비행기 → 기차 → 자동차'], h:'걷기·말에서 하늘까지!'},
+    {q:'교통이 발달하며 새로 생긴 직업은?', c:'비행기 조종사', w:['뱃사공','가마꾼','파발꾼'], h:'비행기가 생겨서!'},
+    {q:'오늘날 시장에 직접 가지 않고 물건을 사는 방법은?', c:'인터넷 쇼핑', w:['봉수 보내기','파발 보내기','서찰 쓰기'], h:'폰으로 주문, 집으로 배달!'},
+    {q:'통신이 발달해서 달라진 점이 <b>아닌</b> 것은?', c:'소식 전하는 데 며칠씩 걸린다', w:['멀리서도 얼굴 보며 통화한다','소식을 바로 전한다','어디서나 연락이 된다'], h:'오늘날은 몇 초면 끝!'},
+  ]),
+  poolGen('심화·도구의 발달',[
+    {q:'옛날 얼음 창고 "석빙고"는 오늘날의?', c:'냉장고', w:['세탁기','에어컨','전자레인지'], h:'음식을 차게 보관!'},
+    {q:'옛날 "우물"은 오늘날의?', c:'수도', w:['욕조','분수','컵'], h:'물을 얻는 방법!'},
+    {q:'옛날 "맷돌"은 오늘날의?', c:'믹서', w:['밥솥','토스터','냄비'], h:'갈아주는 도구!'},
+    {q:'옛날 "지게"는 오늘날의?', c:'수레·트럭', w:['그네','사다리','의자'], h:'짐을 나르는 도구!'},
+    {q:'옛날 "짚신"은 오늘날의?', c:'운동화', w:['모자','장갑','가방'], h:'발에 신는 것!'},
+    {q:'도구가 발달해서 좋아진 점은?', c:'일을 빠르고 편하게 할 수 있다', w:['일이 더 힘들어졌다','시간이 더 오래 걸린다','도구를 쓸 수 없게 됐다'], h:'더 편리해진 생활!'},
+  ]),
+];
+MODULES.soc2.deepGens=[
+  poolGen('심화·지도 읽기',[
+    {q:'지도에서 학교·병원·우체국을 나타내는 약속된 그림은?', c:'기호', w:['사진','낙서','글씨'], h:'간단한 그림 약속!'},
+    {q:'지도에서 동서남북을 알려 주는 표시는?', c:'방위표', w:['축척','기호','범례'], h:'十자 모양에 北!'},
+    {q:'지도에서 강과 바다를 나타내는 색은?', c:'파란색', w:['빨간색','갈색','초록색'], h:'물은 파랗게!'},
+    {q:'지도에서 땅이 높은 곳일수록 보통 무슨 색?', c:'갈색', w:['파란색','하얀색','분홍색'], h:'낮은 곳은 초록, 높은 산은 갈색!'},
+    {q:'기호의 뜻을 모아서 설명해 주는 것은?', c:'범례', w:['일기','목차','사전'], h:'지도의 설명서!'},
+  ]),
+  poolGen('심화·고장 문제 해결',[
+    {q:'고장에 쓰레기가 늘어날 때 좋은 해결 방법은?', c:'분리배출을 잘하고 캠페인 하기', w:['아무 데나 버리기','남의 동네에 버리기','모른 척하기'], h:'함께 노력해야 해결!'},
+    {q:'횡단보도를 건너는 바른 방법은?', c:'초록불에 좌우를 살피고 건너기', w:['빨간불에 빨리 뛰기','아무 데서나 건너기','폰 보며 건너기'], h:'안전이 첫째!'},
+    {q:'공원에서의 바른 행동은?', c:'꽃을 꺾지 않고 눈으로 즐기기', w:['꽃을 꺾어 가기','나무에 낙서하기','쓰레기 두고 오기'], h:'모두의 공원!'},
+    {q:'버스에서 어르신이 서 계시면?', c:'자리를 양보한다', w:['모른 척한다','자는 척한다','더 깊이 앉는다'], h:'배려하는 마음!'},
+    {q:'밤에 시끄러운 소리로 이웃이 힘들어한다면?', c:'서로 약속을 정해 조용히 한다', w:['더 크게 소리 낸다','이사 가라고 한다','싸운다'], h:'이웃과는 대화로!'},
+  ]),
+];
 
 /* ===================== 시작 + PWA ===================== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
