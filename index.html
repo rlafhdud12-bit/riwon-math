@@ -245,6 +245,11 @@ const UNITS = [
   {id:'frac', subj:'math', emoji:'🍕', name:'분수',        sub:'똑같이 나눈 조각',  c:'#10ac84', cd:'#0a8f6f', gname:'그림게임'},
   {id:'len',  subj:'math', emoji:'📏', name:'길이와 시간', sub:'mm·cm·m, 분·초',    c:'#5f27cd', cd:'#4a1fa6', gname:'그림게임'},
   {id:'cap',  subj:'math', emoji:'⚖️', name:'들이와 무게', sub:'L·mL, kg·g',        c:'#2e86de', cd:'#1f6dbf', gname:'그림게임'},
+  {id:'add',   subj:'math', emoji:'➕', name:'덧셈과 뺄셈', sub:'세 자리 수 계산',   c:'#f97f51', cd:'#d2602f', gname:'그림게임'},
+  {id:'shape', subj:'math', emoji:'📐', name:'평면도형',   sub:'선·각·직각 도형',   c:'#26c0d3', cd:'#0f93a5', gname:'도형게임'},
+  {id:'circle',subj:'math', emoji:'⭕', name:'원',         sub:'중심·반지름·지름',  c:'#f06595', cd:'#c2255c', gname:'그림게임'},
+  {id:'deci',  subj:'math', emoji:'🔢', name:'소수',       sub:'0.1과 소수점',      c:'#845ef7', cd:'#6741d9', gname:'그림게임'},
+  {id:'graph', subj:'math', emoji:'📊', name:'자료의 정리', sub:'표와 그림그래프',  c:'#74b816', cd:'#5a8f12', gname:'그래프게임'},
   {id:'kor1', subj:'kor',  emoji:'✏️', name:'맞춤법 달인', sub:'헷갈리는 말 정복',  c:'#f368e0', cd:'#c23593', gname:'낱말게임'},
   {id:'kor2', subj:'kor',  emoji:'🔄', name:'반대말·비슷한말', sub:'낱말의 짝꿍 찾기', c:'#ff6b81', cd:'#d63050', gname:'낱말게임'},
   {id:'kor3', subj:'kor',  emoji:'🙇', name:'높임말 예절', sub:'어른께 바르게 말하기', c:'#a55eea', cd:'#8043c9', gname:'낱말게임'},
@@ -1446,7 +1451,7 @@ function poolGen(cat, pool){
     const it=pick(pool);
     const wrong=shuffle(it.w).slice(0,3);
     const choices=shuffle([it.c].concat(wrong));
-    return {q:it.q, choices, a:choices.indexOf(it.c), hint:it.h};
+    return {q:it.q, choices, a:choices.indexOf(it.c), hint:it.h, visual:it.v||null};
   }};
 }
 function matchGame(pairsAll, tip){
@@ -2371,6 +2376,11 @@ const INSIGHT={
   sci2:'동물은 저마다 다른 한살이로 살아가!',
   soc1:'도구는 늘 "더 편리하게"라는 방향으로 발전!',
   soc2:'공공기관은 세금으로 운영되는 모두의 것!',
+  add:'덧셈·뺄셈의 비밀은 자릿값 — 같은 자리끼리!',
+  shape:'도형은 약속(직각·변·꼭짓점)으로 구분해!',
+  circle:'원은 중심에서 어디든 같은 거리!',
+  deci:'소수는 분수(1/10)의 다른 옷!',
+  graph:'자료는 표와 그래프로 정리하면 한눈에!',
 };
 const TALK={
   mul:['0에 어떤 수를 곱해도 0이 되는 까닭을 아빠·엄마에게 설명해 줘!','세상에 곱셈이 없다면 뭐가 가장 불편할까? 같이 상상해 보자.'],
@@ -2387,6 +2397,11 @@ const TALK={
   sci2:['사람의 한살이는 어떻게 될까? 아기 → ? → ? 같이 채워 보자!','리원이가 아기였을 때 사진을 보며 어떻게 자랐는지 이야기해 보자!'],
   soc1:['30년 뒤엔 어떤 교통수단이 생길까? 상상해서 그려 보자!','할머니·할아버지께 옛날에 쓰던 물건 이야기를 여쭤 보자!'],
   soc2:['우리 동네에 새 공공기관을 만든다면 뭐가 가장 필요할까?','우리 집에서 가장 가까운 소방서·도서관이 어디인지 지도에서 찾아보자!'],
+  add:['마트 전단지에서 물건 두 개 값을 더해 보자! 받아올림이 나올까?','사고 싶은 장난감 값에서 지금 모은 용돈을 빼면 얼마나 모자랄까?'],
+  shape:['집 안에서 직각 5개를 찾아보자! 어디에 숨어 있을까?','창문과 문은 왜 대부분 직사각형일까? 같이 추리해 보자!'],
+  circle:['바퀴가 네모라면 어떤 일이 생길까? 상상해서 설명해 줘!','집에서 원 모양 물건 5개를 찾아 크기 순서로 늘어놓아 보자!'],
+  deci:['줄자로 키를 재서 소수로 말해 보자! 예: 134cm = 1.34m','0.5와 1/2이 왜 같은지 그림을 그려 설명해 줘!'],
+  graph:['우리 가족이 좋아하는 음식을 조사해 그림그래프로 그려 보자!','이 앱의 공부 기록 7일 그래프를 같이 읽어 보자 — 어떤 날 제일 많이 했어?'],
 };
 
 /* =========================================================
@@ -2579,6 +2594,449 @@ MODULES.soc2.thinkGens=[
     {q:'우리 고장 지도를 만들 때 꼭 필요한 두 가지는?', c:'방위표와 기호', w:['연예인 사진과 스티커','게임 아이템','과자 이름 목록'], h:'지도의 약속!'},
     {q:'길을 잃었을 때 가장 좋은 행동은?', c:'경찰관이나 가게 어른께 도움을 청한다', w:['아무나 따라간다','무작정 계속 걷는다','그 자리에서 울기만 한다'], h:'도움 요청은 용감한 행동!'},
   ]),
+];
+
+/* =========================================================
+   🧮 수학 1년치 완성 — 덧셈뺄셈 · 평면도형 · 원 · 소수 · 자료의 정리
+   ========================================================= */
+/* ----- 그림 도우미 ----- */
+function svgLine(kind){
+  const dot=x=>`<circle cx="${x}" cy="25" r="5" fill="var(--c-dark)"/>`;
+  const arr=(x,d)=>`<polygon points="${x},25 ${x-12*d},18 ${x-12*d},32" fill="var(--c-dark)"/>`;
+  let ends='';
+  if(kind==='seg') ends=dot(25)+dot(155);
+  else if(kind==='ray') ends=dot(25)+arr(168,1);
+  else ends=arr(12,-1)+arr(168,1);
+  return `<svg width="180" height="50" viewBox="0 0 180 50" style="max-width:100%"><line x1="25" y1="25" x2="155" y2="25" stroke="var(--c-dark)" stroke-width="4"/>${ends}</svg>`;
+}
+function svgAngle(deg){
+  const rad=deg*Math.PI/180, len=70, cx=30, cy=82;
+  const x=cx+len*Math.cos(rad), y=cy-len*Math.sin(rad);
+  return `<svg width="130" height="100" viewBox="0 0 130 100"><line x1="${cx}" y1="${cy}" x2="${cx+85}" y2="${cy}" stroke="var(--c-dark)" stroke-width="4"/><line x1="${cx}" y1="${cy}" x2="${x.toFixed(0)}" y2="${y.toFixed(0)}" stroke="var(--c-dark)" stroke-width="4"/><circle cx="${cx}" cy="${cy}" r="4" fill="#e8503a"/></svg>`;
+}
+function miniTable(rows){
+  return `<table style="margin:0 auto;border-collapse:collapse;font-weight:800;font-size:15px">${rows.map(r=>`<tr>${r.map(c=>`<td style="border:2px solid var(--c-dark);padding:4px 12px">${c}</td>`).join('')}</tr>`).join('')}</table>`;
+}
+
+/* ----- ➕ 자릿값 게임 ----- */
+function buildPlaceGame(host){
+  window._pg={h:3,t:2,o:5,host}; pgDraw();
+}
+function pgStep(k,d){
+  const s=window._pg;
+  if(k==='h') s.h=Math.max(1,Math.min(9,s.h+d));
+  else if(k==='t') s.t=Math.max(0,Math.min(9,s.t+d));
+  else s.o=Math.max(0,Math.min(9,s.o+d));
+  pgDraw();
+}
+function pgDraw(){
+  const s=window._pg;
+  const row=(emo,n)=>n? Array(n).fill(`<span class="crit" style="font-size:22px">${emo}</span>`).join(''):'<span style="color:var(--soft);font-weight:700">없음</span>';
+  s.host.innerHTML=`<div class="card">
+    <p class="cg-tip">🧱 백·십·일 블록으로 수를 만들어 봐!</p>
+    <div class="ctrl-row">
+      <div class="ctrl"><span class="lbl">백</span><button class="stepbtn" onclick="pgStep('h',-1)">－</button><span class="val">${s.h}</span><button class="stepbtn" onclick="pgStep('h',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">십</span><button class="stepbtn" onclick="pgStep('t',-1)">－</button><span class="val">${s.t}</span><button class="stepbtn" onclick="pgStep('t',1)">＋</button></div>
+      <div class="ctrl"><span class="lbl">일</span><button class="stepbtn" onclick="pgStep('o',-1)">－</button><span class="val">${s.o}</span><button class="stepbtn" onclick="pgStep('o',1)">＋</button></div>
+    </div>
+    <div style="text-align:left;font-weight:800;line-height:2">
+      백(100) → ${row('🟥',s.h)}<br>십(10) → ${row('🟦',s.t)}<br>일(1) → ${row('🟨',s.o)}
+    </div>
+    <div class="cg-eq">${s.h}00 + ${s.t}0 + ${s.o} = <span class="big">${s.h*100+s.t*10+s.o}</span></div>
+  </div>`;
+}
+
+/* ----- ⭕ 반지름 실험 게임 ----- */
+function buildRadiusGame(host){
+  window._rc={r:4,host}; rcDraw();
+}
+function rcStep(d){ const s=window._rc; s.r=Math.max(2,Math.min(7,s.r+d)); rcDraw(); }
+function rcDraw(){
+  const s=window._rc, px=s.r*13;
+  s.host.innerHTML=`<div class="card" style="text-align:center">
+    <p class="cg-tip">⭕ 반지름을 키우면 지름은 어떻게 될까?</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">반지름</span><button class="stepbtn" onclick="rcStep(-1)">－</button><span class="val">${s.r}</span><span style="font-weight:800">칸</span><button class="stepbtn" onclick="rcStep(1)">＋</button></div></div>
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="${px}" fill="color-mix(in srgb,var(--c) 25%, white)" stroke="var(--c-dark)" stroke-width="3"/>
+      <line x1="100" y1="100" x2="${100+px}" y2="100" stroke="#e8503a" stroke-width="4"/>
+      <line x1="${100-px}" y1="100" x2="${100+px}" y2="100" stroke="var(--c-dark)" stroke-width="2" stroke-dasharray="6 4"/>
+      <circle cx="100" cy="100" r="4" fill="#e8503a"/>
+    </svg>
+    <div class="cg-eq">반지름 ${s.r}칸 → 지름 <span class="big">${s.r*2}</span>칸<br><span style="font-size:14px;color:var(--soft)">지름은 언제나 반지름의 2배!</span></div>
+  </div>`;
+}
+
+/* ----- 🔢 소수 막대 게임 ----- */
+function buildDeciGame(host){
+  window._dg2={n:3,host}; dgDraw2();
+}
+function dg2Step(d){ const s=window._dg2; s.n=Math.max(0,Math.min(10,s.n+d)); dgDraw2(); }
+function dgDraw2(){
+  const s=window._dg2;
+  s.host.innerHTML=`<div class="card" style="text-align:center">
+    <p class="cg-tip">🍫 1을 똑같이 10칸으로! 색칠한 만큼이 소수야.</p>
+    <div class="ctrl-row"><div class="ctrl"><span class="lbl">색칠</span><button class="stepbtn" onclick="dg2Step(-1)">－</button><span class="val">${s.n}</span><span style="font-weight:800">칸</span><button class="stepbtn" onclick="dg2Step(1)">＋</button></div></div>
+    ${fracBar(10,s.n)}
+    <div class="cg-eq">${s.n}/10 = <span class="big">${s.n===10?'1':'0.'+s.n}</span>${s.n===10?'<br><span style="font-size:14px;color:var(--soft)">10칸을 다 채우면 1이 돼!</span>':''}</div>
+  </div>`;
+}
+
+/* ----- 📊 그래프 만들기 게임 ----- */
+function buildGraphGame(host){
+  window._gr={vals:[3,5,2,4],host}; grDraw();
+}
+function grStep(i,d){ const s=window._gr; s.vals[i]=Math.max(0,Math.min(9,s.vals[i]+d)); grDraw(); }
+function grDraw(){
+  const s=window._gr, names=['사과','포도','딸기','귤'], emo=['🍎','🍇','🍓','🍊'];
+  const total=s.vals.reduce((a,b)=>a+b,0);
+  const mx=Math.max(...s.vals);
+  const best=s.vals.indexOf(mx);
+  s.host.innerHTML=`<div class="card">
+    <p class="cg-tip">📊 좋아하는 과일 조사! 수를 바꿔 그래프를 만들어 봐.</p>
+    ${names.map((n,i)=>`<div style="display:flex;align-items:center;gap:6px;margin:5px 0">
+      <span style="width:42px;font-weight:800">${n}</span>
+      <button class="stepbtn" style="width:30px;height:30px;font-size:16px" onclick="grStep(${i},-1)">－</button>
+      <button class="stepbtn" style="width:30px;height:30px;font-size:16px" onclick="grStep(${i},1)">＋</button>
+      <span style="font-size:20px">${emo[i].repeat(s.vals[i])}</span>
+      <b style="margin-left:4px">${s.vals[i]}</b>
+    </div>`).join('')}
+    <div class="cg-eq" style="font-size:17px">합계 <span class="big">${total}</span>명 · 가장 인기: <b style="color:var(--c-dark)">${total?names[best]:'-'}</b><br>
+    <span style="font-size:13px;color:var(--soft)">그림의 길이만 봐도 많고 적음이 한눈에!</span></div>
+  </div>`;
+}
+
+/* ----- ➕ 덧셈과 뺄셈 ----- */
+MODULES.add={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 자릿값</span>
+      <h3>🧱 같은 자리끼리 더하고 빼!</h3>
+      <p>325는 <span class="hl">백 3개 + 십 2개 + 일 5개</span>. 세로셈에서 줄을 맞추는 건 같은 자리끼리 계산하기 위해서야.</p>
+      <div class="formula">백은 백끼리 · 십은 십끼리 · 일은 일끼리</div></div>
+    <div class="card"><span class="method-tag">방법 2 · 받아올림/받아내림</span>
+      <h3>🔼 10이 모이면 윗자리로!</h3>
+      <p>7+5=12 → 일의 자리에 2를 쓰고 <span class="hl">10 묶음 1개는 십의 자리로</span> 올려요(받아올림).</p>
+      <p>빼기에서 모자라면 윗자리에서 <span class="hl">10을 빌려와요</span>(받아내림).</p></div>
+    <div class="card"><span class="method-tag">방법 3 · 어림과 검산</span>
+      <h3>🔍 똑똑한 확인법</h3>
+      <p>혹시 틀렸나? <b>거꾸로 연산</b>으로 검산! 700-250=450 → 450+250=700 확인 끝.</p>
+      <div class="tipbox"><b>꿀팁</b> 199 빼기는 200을 빼고 1을 돌려줘! 628-199 = 628-200+1 = 429</div></div>`;
+  },
+  games:[
+    {name:'🧱 자릿값 블록', build:buildPlaceGame},
+    {name:'🔼 받아올림 분류', build:sortGame([
+      ['27+5',0],['34+8',0],['46+7',0],['58+6',0],['39+4',0],
+      ['23+4',1],['41+7',1],['62+3',1],['35+2',1],['51+6',1]
+    ],'🔼 받아올림 필요','✅ 그냥 더하면 끝','일의 자리 합이 10을 넘는지 관찰!')},
+  ],
+  gens:[
+    {cat:'세 자리 덧셈', make(){const a=rnd(124,667),b=rnd(112,321);return{q:`${a} <span class="b">+</span> ${b} = ?`,a:a+b,hint:`일은 일끼리, 십은 십끼리, 백은 백끼리! 10이 넘으면 올림.`};}},
+    {cat:'세 자리 뺄셈', make(){const a=rnd(420,950),b=rnd(135,a-150);return{q:`${a} <span class="b">-</span> ${b} = ?`,a:a-b,hint:`모자라면 윗자리에서 10을 빌려와요!`};}},
+    {cat:'빈칸 추리', make(){const b=rnd(120,420),x=rnd(110,430);return{q:`□ + ${b} = ${b+x} &nbsp;— □는?`,a:x,hint:`거꾸로! ${b+x} - ${b}`};}},
+    {cat:'덧뺄셈 문장제', make(){const a=rnd(150,480),b=rnd(120,380);return{q:`도서관에 동화책 ${a}권, 과학책 ${b}권이 있어요. 모두 몇 권?`,a:a+b,hint:`"모두"는 더하기!`};}},
+  ],
+  thinkGens:[
+    poolGen('🧠 왜 그럴까',[
+      {q:'받아올림에서 올라가는 "1"의 진짜 뜻은?', c:'10이 한 묶음 — 윗자리의 1', w:['그냥 1개','0이라는 뜻','아무 뜻 없음'], h:'10개가 모이면 윗자리 한 칸!'},
+      {q:'세로셈에서 자리를 맞춰 쓰는 까닭은?', c:'같은 자리끼리 계산해야 해서', w:['예뻐 보이려고','종이를 아끼려고','규칙이니까 그냥'], h:'백은 백끼리!'},
+      {q:'325 + 0 = 325 인 까닭은?', c:'0은 아무것도 더하지 않는 수라서', w:['0이 사라져서','325가 특별한 수라서','계산 오류라서'], h:'0의 뜻을 생각해!'},
+      {q:'덧셈은 순서를 바꿔도 되는데(3+5=5+3) 뺄셈은 안 되는 까닭은?', c:'빼기는 "~에서 덜어내는" 방향이 있어서', w:['뺄셈이 더 어려워서','숫자 기분 때문에','사실 바꿔도 똑같다'], h:'5-3과 3-5를 비교해 봐!'},
+      {q:'628-199를 빠르게 푸는 똑똑한 방법은?', c:'628-200을 하고 1을 다시 더한다', w:['무조건 일의 자리부터 빌린다','어림해서 대충 쓴다','자리를 바꿔 뺀다'], h:'199는 200보다 딱 1 작아!'},
+    ]),
+    poolGen('🔄 거꾸로·오개념',[
+      {q:'<b>잘못</b> 말한 친구는?', c:'"뺄셈도 순서를 바꿔 계산해도 돼"', w:['"덧셈은 순서를 바꿔도 같아"','"같은 자리끼리 계산해야 해"','"검산은 거꾸로 연산으로 해"'], h:'5-3 ≠ 3-5!'},
+      {q:'700 - 250 = 450 을 검산하는 식은?', c:'450 + 250 = 700', w:['700 + 250','450 - 250','250 - 450'], h:'거꾸로 더해서 확인!'},
+      {q:'합이 500이 되는 식은?', c:'230 + 270', w:['240 + 250','310 + 210','150 + 340'], h:'일·십·백 자리를 꼼꼼히!'},
+      {q:'□ - 140 = 260 에서 □는?', c:'400', w:['120','300','420'], h:'거꾸로! 260 + 140'},
+    ]),
+  ],
+  deepGens:[
+    {cat:'심화·천을 넘는 덧셈', make(){const a=rnd(456,887),b=rnd(345,876);return{q:`${a} + ${b} = ?`,a:a+b,hint:`1000이 넘어도 방법은 같아! 자리끼리.`};}},
+    {cat:'심화·연속 받아내림', make(){const a=rnd(4,9)*100+rnd(0,5),b=rnd(126,a-130);return{q:`${a} - ${b} = ?`,a:a-b,hint:`십의 자리가 0이면 백에서 빌려와요!`};}},
+    {cat:'심화·두 단계 문장제', make(){const a=rnd(300,600),b=rnd(80,200),c=rnd(50,150);return{q:`구슬 ${a}개에서 ${b}개를 친구에게 주고, ${c}개를 새로 받았어요. 지금 몇 개?`,a:a-b+c,hint:`${a}-${b} 먼저, 그다음 +${c}!`};}},
+  ],
+};
+
+/* ----- 📐 평면도형 ----- */
+MODULES.shape={
+  concept(){ return `
+    <div class="card"><span class="method-tag">약속 1 · 선의 세 가지</span>
+      <h3>📏 선분 · 직선 · 반직선</h3>
+      <p><b>선분</b>: 두 점을 곧게 이은 선 (끝이 있음) ${svgLine('seg')}</p>
+      <p><b>직선</b>: 양쪽으로 끝없이 뻗는 선 ${svgLine('line')}</p>
+      <p><b>반직선</b>: 한 점에서 한쪽으로만 뻗는 선 ${svgLine('ray')}</p></div>
+    <div class="card"><span class="method-tag">약속 2 · 각과 직각</span>
+      <h3>📐 각 = 한 점에서 그은 두 반직선</h3>
+      <p>만나는 점이 <b>꼭짓점</b>, 두 선이 <b>변</b>. 종이 모서리처럼 반듯한 각이 <span class="hl">직각</span>!</p>
+      <p style="text-align:center">${svgAngle(90)}</p>
+      <div class="tipbox"><b>확인법</b> 삼각자의 직각이나 종이 모서리를 대 보면 직각인지 알 수 있어!</div></div>
+    <div class="card"><span class="method-tag">약속 3 · 직각 가족 도형</span>
+      <h3>🔷 직각삼각형 · 직사각형 · 정사각형</h3>
+      <p><b>직각삼각형</b>: 직각이 있는 삼각형</p>
+      <p><b>직사각형</b>: 네 각이 모두 직각인 사각형</p>
+      <p><b>정사각형</b>: 직사각형 중 네 변의 길이까지 모두 같은 것</p>
+      <div class="tipbox"><b>비밀!</b> 그래서 정사각형은 직사각형이기도 해. (거꾸로는 안 됨!)</div></div>`;
+  },
+  games:[
+    {name:'📐 직각 찾기', build:sortGame([
+      [svgAngle(90),0],[svgAngle(45),1],[svgAngle(120),1],[svgAngle(90),0],
+      [svgAngle(60),1],[svgAngle(150),1],[svgAngle(90),0],[svgAngle(30),1]
+    ],'📐 직각이다','❌ 직각 아니다','종이 모서리를 떠올리며 판별해 봐!')},
+    {name:'🃏 약속 짝맞추기', build:matchGame([
+      ['선분','두 점을 곧게 이은 선'],['직선','양쪽으로 끝없이 뻗는 선'],['반직선','한쪽으로만 뻗는 선'],
+      ['직각','종이 모서리처럼 반듯한 각'],['직사각형','네 각이 모두 직각'],['정사각형','네 각 직각 + 네 변 같음']
+    ],'📐 도형과 약속을 짝지어요!')},
+  ],
+  gens:[
+    poolGen('선 알아보기',[
+      {v:svgLine('seg'), q:'이 선의 이름은?', c:'선분', w:['직선','반직선','곡선'], h:'양쪽 끝에 점이 있어!'},
+      {v:svgLine('line'), q:'이 선의 이름은?', c:'직선', w:['선분','반직선','각'], h:'양쪽으로 끝없이!'},
+      {v:svgLine('ray'), q:'이 선의 이름은?', c:'반직선', w:['선분','직선','꼭짓점'], h:'한쪽으로만 뻗어!'},
+      {q:'두 점을 곧게 이은 선은?', c:'선분', w:['직선','반직선','원'], h:'끝이 있는 선!'},
+      {q:'한 점에서 시작해 한쪽으로만 끝없이 뻗는 선은?', c:'반직선', w:['선분','직선','변'], h:'반쪽 직선!'},
+    ]),
+    poolGen('각과 직각',[
+      {q:'각에서 두 변이 만나는 점을 뭐라고 할까?', c:'꼭짓점', w:['변','중심','받침점'], h:'뾰족한 그 점!'},
+      {q:'각을 이루는 두 반직선을 뭐라고 할까?', c:'변', w:['꼭짓점','지름','선분점'], h:'각의 양팔!'},
+      {v:svgAngle(90), q:'이 각의 이름은?', c:'직각', w:['직각보다 작은 각','직각보다 큰 각','반직각'], h:'종이 모서리와 똑같아!'},
+      {q:'직각인지 확인할 때 쓰는 도구는?', c:'삼각자', w:['지우개','풀','클립'], h:'직각이 들어 있는 자!'},
+      {q:'시계가 3시일 때 두 바늘이 이루는 각은?', c:'직각', w:['직각보다 작다','직각보다 크다','각이 아니다'], h:'12와 3, 반듯한 ㄱ자!'},
+    ]),
+    poolGen('도형의 약속',[
+      {q:'직각이 있는 삼각형을 뭐라고 할까?', c:'직각삼각형', w:['정삼각형','사각형','직선삼각형'], h:'직각+삼각형!'},
+      {q:'네 각이 모두 직각인 사각형은?', c:'직사각형', w:['삼각형','오각형','원'], h:'책 표지 모양!'},
+      {q:'직사각형 중에서 네 변의 길이가 모두 같은 것은?', c:'정사각형', w:['직각삼각형','마름모만','반직선'], h:'색종이 모양!'},
+      {q:'맞는 설명은?', c:'정사각형은 직사각형이기도 하다', w:['직사각형은 모두 정사각형이다','정사각형은 각이 3개다','직사각형은 변이 5개다'], h:'정사각형도 네 각이 직각!'},
+      {q:'직사각형의 꼭짓점은 몇 개?', c:'4개', w:['3개','5개','6개'], h:'네 모서리!'},
+    ]),
+  ],
+  thinkGens:[
+    poolGen('🧠 왜 그럴까',[
+      {q:'정사각형이 직사각형이기도 한 까닭은?', c:'네 각이 모두 직각이라는 조건을 만족해서', w:['이름이 비슷해서','크기가 같아서','각이 5개라서'], h:'직사각형의 조건을 확인해!'},
+      {q:'책·창문·문이 대부분 직사각형인 까닭은?', c:'반듯해서 쌓고 맞추기 좋아서', w:['동그라미는 못 만들어서','법으로 정해져서','우연히'], h:'빈틈없이 차곡차곡!'},
+      {q:'종이 모서리로 직각을 확인할 수 있는 까닭은?', c:'종이 모서리가 직각이라서 대 보면 알 수 있어서', w:['종이가 하얘서','종이가 얇아서','모서리가 날카로워서'], h:'기준이 되는 직각!'},
+      {q:'선분과 직선의 다른 점은?', c:'선분은 끝이 있고 직선은 끝없이 뻗는다', w:['선분이 더 굵다','직선은 구부러진다','둘은 같다'], h:'끝점의 있고 없음!'},
+    ]),
+    poolGen('🔄 오개념·적용',[
+      {q:'<b>잘못</b> 말한 친구는?', c:'"변이 4개면 무조건 직사각형이야"', w:['"직사각형은 네 각이 직각이야"','"정사각형은 네 변이 같아"','"직각삼각형엔 직각이 있어"'], h:'비뚤어진 사각형도 변은 4개!'},
+      {q:'길쭉한 직사각형이 정사각형이 되려면?', c:'네 변의 길이가 모두 같아져야 한다', w:['색을 칠해야 한다','더 커져야 한다','각을 없애야 한다'], h:'정사각형의 추가 조건!'},
+      {q:'삼각자에서 직각은 몇 개?', c:'1개', w:['2개','3개','없다'], h:'반듯한 모서리를 세어 봐!'},
+      {q:'직각 2개로 이어 붙이면 만들어지는 것은?', c:'일직선(평평한 각)', w:['더 뾰족한 각','원','점'], h:'ㄱ자 두 개를 붙이면?'},
+    ]),
+  ],
+  deepGens:[
+    {cat:'심화·정사각형 둘레', make(){const s=rnd(3,9);return{q:`한 변이 ${s}cm인 정사각형의 네 변의 길이를 모두 더하면?`,a:4*s,hint:`같은 변이 4개! ${s}×4`};}},
+    {cat:'심화·직사각형 둘레', make(){const w=rnd(4,9),h=rnd(2,w-1);return{q:`가로 ${w}cm, 세로 ${h}cm 직사각형의 네 변의 합은?`,a:2*(w+h),hint:`(${w}+${h})×2!`};}},
+    poolGen('심화·도형 추리',[
+      {q:'직사각형 안에 직각은 모두 몇 개?', c:'4개', w:['2개','3개','8개'], h:'네 모서리 모두!'},
+      {q:'정사각형 색종이를 반으로 접으면 생기는 도형은?', c:'직사각형', w:['정사각형','원','반직선'], h:'반쪽을 상상해 봐!'},
+      {q:'정사각형을 꼭짓점에서 꼭짓점으로 자르면?', c:'직각삼각형 2개', w:['정사각형 2개','원 2개','직선 2개'], h:'대각선으로 싹둑!'},
+      {q:'시계가 9시일 때 두 바늘의 각은?', c:'직각', w:['직각보다 작다','직각보다 크다','일직선'], h:'12와 9!'},
+    ]),
+  ],
+};
+
+/* ----- ⭕ 원 ----- */
+MODULES.circle={
+  concept(){ return `
+    <div class="card"><span class="method-tag">약속 1 · 중심과 반지름</span>
+      <h3>⭕ 원의 한가운데, 그리고 거리</h3>
+      <p>원의 한가운데 점이 <b>중심</b>. 중심에서 원 위의 점까지 이은 선이 <b>반지름</b>.</p>
+      <div class="formula">한 원에서 반지름은 모두 길이가 같아요!</div></div>
+    <div class="card"><span class="method-tag">약속 2 · 지름</span>
+      <h3>📏 원을 가로지르는 가장 긴 선</h3>
+      <p><b>지름</b> = 중심을 지나며 원 위의 두 점을 잇는 선. 그래서 <span class="hl">지름 = 반지름 × 2</span>!</p></div>
+    <div class="card"><span class="method-tag">약속 3 · 컴퍼스</span>
+      <h3>🖊️ 원을 그리는 도구</h3>
+      <p>침을 <b>중심</b>에 꽂고, 벌린 길이(=<b>반지름</b>)만큼 빙 돌리면 완성!</p>
+      <div class="tipbox"><b>생각!</b> 그래서 원은 "중심에서 같은 거리에 있는 점들의 모임"이야.</div></div>`;
+  },
+  games:[
+    {name:'⭕ 반지름 실험', build:buildRadiusGame},
+    {name:'🃏 원의 약속 짝', build:matchGame([
+      ['중심','원의 한가운데 점'],['반지름','중심에서 원 위까지'],['지름','중심을 지나는 가장 긴 선'],
+      ['컴퍼스','원을 그리는 도구'],['지름의 길이','반지름의 2배'],['한 원의 반지름','모두 길이가 같다']
+    ],'⭕ 원의 약속을 짝지어요!')},
+  ],
+  gens:[
+    poolGen('원의 약속',[
+      {q:'원의 한가운데에 있는 점은?', c:'중심', w:['반지름','꼭짓점','변'], h:'컴퍼스 침을 꽂는 곳!'},
+      {q:'중심에서 원 위의 점까지 이은 선은?', c:'반지름', w:['지름','선분점','둘레'], h:'컴퍼스를 벌린 만큼!'},
+      {q:'중심을 지나며 원 위의 두 점을 잇는 선은?', c:'지름', w:['반지름','중심선','직각'], h:'원에서 가장 긴 선!'},
+      {q:'한 원에서 반지름들의 길이는?', c:'모두 같다', w:['모두 다르다','위쪽이 길다','잴 수 없다'], h:'원의 가장 큰 비밀!'},
+      {q:'원에서 가장 긴 선분은?', c:'지름', w:['반지름','중심','짧은 현'], h:'중심을 지나야 가장 길어!'},
+    ]),
+    {cat:'반지름↔지름', make(){const r=rnd(2,12); if(Math.random()<0.5) return{q:`반지름이 ${r}cm인 원의 <span class="b">지름</span>은 몇 cm?`,a:r*2,hint:'지름 = 반지름 × 2!'};
+      return{q:`지름이 ${r*2}cm인 원의 <span class="b">반지름</span>은 몇 cm?`,a:r,hint:'반지름 = 지름 ÷ 2!'};}},
+    poolGen('컴퍼스 사용',[
+      {q:'컴퍼스로 원을 그릴 때 침을 꽂는 곳은?', c:'중심이 될 점', w:['원 위 아무 데나','지름 끝','종이 모서리'], h:'중심이 기준!'},
+      {q:'컴퍼스를 벌린 길이는 무엇과 같을까?', c:'반지름', w:['지름','둘레','중심'], h:'중심에서 연필까지!'},
+      {q:'더 큰 원을 그리려면?', c:'컴퍼스를 더 벌린다', w:['더 오므린다','더 세게 누른다','더 빨리 돌린다'], h:'반지름이 클수록 큰 원!'},
+      {q:'반지름 3cm 원을 그리려면 컴퍼스를 자에서 몇 cm로 벌릴까?', c:'3cm', w:['6cm','1.5cm','9cm'], h:'벌린 길이 = 반지름!'},
+    ]),
+  ],
+  thinkGens:[
+    poolGen('🧠 왜 그럴까',[
+      {q:'바퀴가 원 모양인 까닭은?', c:'중심에서 땅까지 거리가 항상 같아 덜컹거리지 않아서', w:['만들기 제일 쉬워서','네모는 못 굴러가서만','보기 좋아서'], h:'네모 바퀴 자전거를 상상해 봐!'},
+      {q:'지름이 반지름의 2배인 까닭은?', c:'중심을 지나는 지름은 반지름 2개를 이은 것이라서', w:['2가 좋은 숫자라서','지름이 더 굵어서','우연이라서'], h:'지름을 반으로 잘라 봐!'},
+      {q:'컴퍼스 없이 컵으로 원을 그릴 수 있는 까닭은?', c:'컵 바닥 테두리가 이미 원이라서', w:['컵이 무거워서','컵이 투명해서','물이 들어 있어서'], h:'본뜨기!'},
+      {q:'피자를 원 모양으로 만들면 좋은 점은?', c:'중심에서 잘라 같은 크기로 나누기 좋아서', w:['상자에 잘 안 들어가서','식지 않아서','더 커 보여서'], h:'분수 단원과 연결!'},
+    ]),
+    poolGen('🔄 오개념·비교',[
+      {q:'<b>잘못</b> 말한 친구는?', c:'"한 원에서 반지름은 방향마다 길이가 달라"', w:['"지름은 반지름의 2배야"','"컴퍼스 침은 중심에 꽂아"','"지름은 중심을 지나"'], h:'원의 제1 비밀!'},
+      {q:'지름 10cm 원과 반지름 6cm 원 중 더 큰 것은?', c:'반지름 6cm 원 (지름 12cm)', w:['지름 10cm 원','둘이 같다','비교할 수 없다'], h:'단위를 지름으로 통일!'},
+      {q:'원의 중심은 몇 개?', c:'1개', w:['2개','4개','무수히 많다'], h:'한가운데는 딱 한 곳!'},
+      {q:'동전을 종이에 대고 그리면 생기는 것은?', c:'원', w:['직사각형','직각','선분'], h:'동전 테두리 모양!'},
+    ]),
+  ],
+  deepGens:[
+    {cat:'심화·원 이어붙이기', make(){const r=rnd(2,6);return{q:`반지름 ${r}cm인 원 두 개를 옆으로 딱 붙였어요. 전체 가로 길이는?`,a:4*r,hint:`지름(${2*r})이 2개!`};}},
+    {cat:'심화·정사각형 속 원', make(){const s=rnd(2,8)*2;return{q:`한 변이 ${s}cm인 정사각형에 꼭 맞는 원의 반지름은?`,a:s/2,hint:`지름 = 정사각형 한 변 = ${s}!`};}},
+    {cat:'심화·반지름 계산', make(){const r=rnd(3,9);return{q:`반지름 ${r}cm 원의 지름에 다시 2배를 하면?`,a:4*r,hint:`지름 ${2*r}의 2배!`};}},
+  ],
+};
+
+/* ----- 🔢 소수 ----- */
+MODULES.deci={
+  concept(){ return `
+    <div class="card"><span class="method-tag">약속 1 · 0.1의 탄생</span>
+      <h3>🍫 1을 10칸으로 나누면</h3>
+      <p>한 칸은 분수로 <b>1/10</b>. 이걸 다르게 쓰면 <span class="hl">0.1</span>! 가운데 점이 <b>소수점</b>이야.</p>
+      <div class="formula">1/10 = 0.1 &nbsp;·&nbsp; 3/10 = 0.3 &nbsp;·&nbsp; 7/10 = 0.7</div></div>
+    <div class="card"><span class="method-tag">약속 2 · 읽는 법</span>
+      <h3>🗣️ 0.7 = "영 점 칠"</h3>
+      <p>숫자 그대로! 3.4는 "삼 점 사". 점 뒤는 한 글자씩 읽어요.</p></div>
+    <div class="card"><span class="method-tag">약속 3 · 크기 비교</span>
+      <h3>⚖️ 누가 더 클까?</h3>
+      <p>자연수 부분 먼저! 같으면 소수점 뒤를 비교. <b>0.3 &lt; 0.7</b>, <b>2.5 &gt; 1.9</b></p>
+      <div class="tipbox"><b>기억!</b> 0.1이 10개 모이면 1! (0.9 다음은 1)</div></div>`;
+  },
+  games:[
+    {name:'🍫 소수 막대', build:buildDeciGame},
+    {name:'🃏 소수 짝맞추기', build:matchGame([
+      ['0.1','1/10'],['0.5','5/10'],['0.7','영 점 칠'],
+      ['0.9','9/10'],['1','0.1이 10개'],['소수점','수 가운데 찍는 점']
+    ],'🔢 같은 뜻끼리 짝지어요!')},
+  ],
+  gens:[
+    {cat:'분수→소수', make(){const n=rnd(1,9);const c='0.'+n;const w=[`${n}.0`, `0.${n===1?2:n-1}`, `${n}0`];const choices=shuffle([c].concat(w));return{q:`${n}/10 을 소수로 쓰면?`,choices,a:choices.indexOf(c),hint:'1/10 = 0.1 이야!'};}},
+    poolGen('소수 읽기',[
+      {q:'0.7을 바르게 읽으면?', c:'영 점 칠', w:['영 점 일곱','칠 점 영','영칠'], h:'점 뒤는 한 글자씩!'},
+      {q:'0.2를 바르게 읽으면?', c:'영 점 이', w:['이 점 영','영 점 둘','공이'], h:'영 점 …!'},
+      {q:'3.4를 바르게 읽으면?', c:'삼 점 사', w:['삼사','사 점 삼','삼 점 넷'], h:'자연수 그대로 + 점 + 사!'},
+      {q:'6.8을 바르게 읽으면?', c:'육 점 팔', w:['팔 점 육','육십팔','육 점 여덟'], h:'육! 점! 팔!'},
+      {q:'"영 점 오"를 숫자로 쓰면?', c:'0.5', w:['5.0','0.05','50'], h:'영=0, 오=5!'},
+    ]),
+    {cat:'크기 비교', make(){let x=rnd(1,9),y=rnd(1,9);while(y===x)y=rnd(1,9);const c='0.'+Math.max(x,y);const choices=shuffle([c,'0.'+Math.min(x,y),'둘이 같다','비교할 수 없다']);return{q:`0.${x} 와 0.${y} 중 더 <span class="b">큰</span> 수는?`,choices,a:choices.indexOf(c),hint:'소수점 뒤 숫자를 비교!'};}},
+    {cat:'0.1 모으기', make(){const n=rnd(2,9);return{q:`0.1이 ${n}개 모이면 0.□ — □는?`,a:n,hint:`0.1이 ${n}개 = ${n}/10!`};}},
+  ],
+  thinkGens:[
+    poolGen('🧠 왜 그럴까',[
+      {q:'0.1이 10개 모이면 1이 되는 까닭은?', c:'10칸을 다 채우면 전체(1)가 되어서', w:['10이 행운의 수라서','0.10이라서','소수점이 사라져서'], h:'초콜릿 10칸을 다 모으면?'},
+      {q:'0.9와 1 중 더 큰 것과 그 까닭은?', c:'1 — 0.9는 아직 한 칸(0.1) 모자라서', w:['0.9 — 9가 1보다 커서','둘이 같다','알 수 없다'], h:'한 칸 남았어!'},
+      {q:'키 1.3m에서 소수점의 역할은?', c:'1m와 0.3m 부분을 구분해 줘서', w:['멋으로 찍는 점','곱하라는 뜻','끝이라는 뜻'], h:'자연수와 소수의 경계!'},
+      {q:'0.5가 "절반"인 까닭은?', c:'10칸 중 5칸 = 반이라서', w:['5가 반쪽 모양이라서','0.5가 제일 작아서','우연이라서'], h:'5/10을 그림으로!'},
+    ]),
+    poolGen('🔄 오개념·연결',[
+      {q:'<b>잘못</b> 말한 친구는?', c:'"0.3과 3은 같은 수야"', w:['"0.3은 3/10이야"','"0.7은 영 점 칠이라 읽어"','"0.9 다음 0.1을 더하면 1이야"'], h:'0.3은 1보다 작아!'},
+      {q:'7.8에서 7이 뜻하는 것은?', c:'자연수 7 (온전한 7개)', w:['0.7','7/10','소수점'], h:'점 앞은 자연수!'},
+      {q:'0.4를 분수로 나타내면?', c:'4/10', w:['1/4','4/100','40/10'], h:'0.1 = 1/10!'},
+      {q:'1/2을 소수로 나타내면?', c:'0.5', w:['0.2','1.2','2.1'], h:'1/2 = 5/10!'},
+    ]),
+  ],
+  deepGens:[
+    {cat:'심화·mm와 소수', make(){const c=rnd(2,9);let m=rnd(1,9);while(m===c)m=rnd(1,9);const ans=`${c}.${m}cm`;const choices=shuffle([ans,`${c}${m}cm`,`0.${c}${m}cm`,`${m}.${c}cm`]);return{q:`${c*10+m}mm는 몇 cm일까?`,choices,a:choices.indexOf(ans),hint:`10mm=1cm, 1mm=0.1cm!`};}},
+    {cat:'심화·사이의 수', make(){const x=rnd(1,7);const c='0.'+(x+1);const choices=shuffle([c,'0.'+x,'0.'+(x+2),'0.'+(x>2?x-2:x+3)]);return{q:`0.${x}보다 크고 0.${x+2}보다 작은 소수는?`,choices,a:choices.indexOf(c),hint:'수직선에 놓아 봐!'};}},
+    {cat:'심화·0.1이 몇십 개', make(){const w=rnd(1,5);let d=rnd(1,9);while(d===w)d=rnd(1,9);const c=`${w}.${d}`;const choices=shuffle([c,`${d}.${w}`,`${w}${d}`,`0.${w}${d}`]);return{q:`0.1이 ${w*10+d}개 모이면?`,choices,a:choices.indexOf(c),hint:`10개=1, ${w*10}개=${w}!`};}},
+  ],
+};
+
+/* ----- 📊 자료의 정리 ----- */
+MODULES.graph={
+  concept(){ return `
+    <div class="card"><span class="method-tag">방법 1 · 표로 정리</span>
+      <h3>📋 흩어진 자료를 칸에!</h3>
+      <p>조사한 것을 표로 정리하면 빠뜨리지 않고 셀 수 있어. 마지막엔 <b>합계</b>도!</p>
+      ${miniTable([['과일','사과','포도','딸기','합계'],['학생 수','5','3','7','15']])}</div>
+    <div class="card"><span class="method-tag">방법 2 · 그림그래프</span>
+      <h3>📊 그림의 수로 한눈에!</h3>
+      <p>큰 그림(◎)은 <b>10</b>, 작은 그림(○)은 <b>1</b>. ◎◎○○○ = 23!</p>
+      <div class="tipbox"><b>좋은 점</b> 숫자를 읽지 않아도 누가 많고 적은지 바로 보여!</div></div>
+    <div class="card"><span class="method-tag">방법 3 · 해석하기</span>
+      <h3>🔎 그래프가 들려주는 이야기</h3>
+      <p>가장 많은 것·가장 적은 것·차이를 읽어내면 <span class="hl">결정</span>을 할 수 있어. (예: 급식 메뉴 정하기!)</p></div>`;
+  },
+  games:[
+    {name:'📊 그래프 만들기', build:buildGraphGame},
+    {name:'🃏 정리 짝맞추기', build:matchGame([
+      ['표','수를 칸에 정리한 것'],['그림그래프','그림 수로 나타낸 것'],['합계','모두 더한 수'],
+      ['큰 그림 ◎','10을 나타냄'],['작은 그림 ○','1을 나타냄'],['조사','자료를 모으는 일']
+    ],'📊 정리 도구와 뜻을 짝지어요!')},
+  ],
+  gens:[
+    {cat:'그림그래프 읽기', make(){const b=rnd(1,3),s=rnd(1,6);return{visual:`<div style="font-size:30px;letter-spacing:2px">${'◎'.repeat(b)}${'○'.repeat(s)}</div>`,q:`큰 그림(◎)=10, 작은 그림(○)=1.<br>모두 얼마일까?`,a:b*10+s,hint:`${b}0 + ${s}!`};}},
+    {cat:'표 읽기·합계', make(){const a=rnd(3,9),b=rnd(3,9),c=rnd(3,9);return{visual:miniTable([['과일','사과','포도','딸기'],['수',String(a),String(b),String(c)]]),q:`모두 합하면 몇 개?`,a:a+b+c,hint:`${a}+${b}+${c}!`};}},
+    {cat:'가장 많은 것', make(){const names=['사과','포도','딸기','귤'];const vals=shuffle([2,3,4,5,6,7,8,9]).slice(0,4);const mx=Math.max.apply(null,vals);const c=names[vals.indexOf(mx)];const choices=shuffle(names.slice());return{visual:miniTable([['과일'].concat(names),['수'].concat(vals.map(String))]),q:`가장 <span class="b">많은</span> 과일은?`,choices,a:choices.indexOf(c),hint:'수가 제일 큰 칸!'};}},
+    {cat:'차이 구하기', make(){const x=rnd(5,9),y=rnd(1,x-2);return{q:`사과가 ${x}개, 귤이 ${y}개예요. 사과는 귤보다 몇 개 더 많을까?`,a:x-y,hint:`${x}-${y}!`};}},
+  ],
+  thinkGens:[
+    poolGen('🧠 왜 그럴까',[
+      {q:'그림그래프에서 큰 그림(=10)을 쓰는 까닭은?', c:'10개를 일일이 그리지 않아도 돼서', w:['큰 그림이 예뻐서','작은 그림이 부족해서','규칙이니까 그냥'], h:'34를 ○ 34개로 그린다면?'},
+      {q:'조사할 때 표를 먼저 만드는 까닭은?', c:'빠뜨리거나 두 번 세지 않으려고', w:['표가 멋있어서','숙제니까','종이를 채우려고'], h:'정리의 힘!'},
+      {q:'그래프에 제목이 필요한 까닭은?', c:'무엇을 조사했는지 알려 줘야 해서', w:['길어 보이려고','글씨 연습하려고','없어도 똑같아서'], h:'제목 없는 그래프는 수수께끼!'},
+      {q:'급식 메뉴를 정할 때 조사가 도움이 되는 까닭은?', c:'더 많은 사람이 좋아하는 것을 고를 수 있어서', w:['조사하면 음식이 맛있어져서','어른들이 시켜서','시간이 남아서'], h:'자료로 결정하기!'},
+    ]),
+    poolGen('🔄 오개념·해석',[
+      {q:'<b>잘못</b> 말한 친구는?', c:'"그림그래프의 ○ 하나는 항상 100이야"', w:['"◎=10, ○=1로 약속할 수 있어"','"합계는 모두 더한 수야"','"표는 자료를 정리한 거야"'], h:'단위는 그래프마다 약속!'},
+      {q:'◎=10, ○=1일 때 25를 그리면?', c:'◎◎○○○○○', w:['◎◎◎◎◎','○○','◎○'], h:'10이 2개, 1이 5개!'},
+      {q:'반 친구 20명 중 강아지 12명, 고양이 8명이 좋대요. 알 수 있는 것은?', c:'강아지를 좋아하는 친구가 4명 더 많다', w:['고양이가 더 인기다','모두 토끼를 좋아한다','알 수 없다'], h:'12-8을 비교!'},
+      {q:'그래프를 보고 할 수 <b>없는</b> 것은?', c:'친구들의 마음속 생각까지 알기', w:['가장 많은 항목 찾기','차이 구하기','합계 구하기'], h:'그래프는 숫자만 보여 줘!'},
+    ]),
+  ],
+  deepGens:[
+    {cat:'심화·그림그래프 합', make(){const a1=rnd(1,3),a2=rnd(1,6),b1=rnd(1,3),b2=rnd(1,6);return{visual:`<div style="text-align:left;font-weight:800;font-size:18px">A마을 ${'◎'.repeat(a1)}${'○'.repeat(a2)}<br>B마을 ${'◎'.repeat(b1)}${'○'.repeat(b2)}</div>`,q:`◎=10, ○=1. 두 마을을 합하면?`,a:a1*10+a2+b1*10+b2,hint:`A=${a1*10+a2}, B=${b1*10+b2}!`};}},
+    {cat:'심화·빈칸 추리', make(){const a=rnd(5,15),b=rnd(5,15),x=rnd(5,15);return{visual:miniTable([['모둠','1모둠','2모둠','3모둠','합계'],['점수',String(a),'?',String(b),String(a+b+x)]]),q:`2모둠의 점수(?)는?`,a:x,hint:`합계에서 나머지를 빼!`};}},
+    {cat:'심화·자료로 결정', make(){const x=rnd(11,19),y=rnd(3,9);return{q:`체험학습 투표: 동물원 ${x}표, 박물관 ${y}표. 동물원이 몇 표 차이로 뽑혔을까?`,a:x-y,hint:`${x}-${y}!`};}},
+  ],
+};
+
+/* ----- 새 단원 발견 시나리오 ----- */
+DISCOVER.add=[
+  {show:'300+200=500<br>320+200=520<br>325+200=525',
+   q:'수가 바뀌어도 변하지 않는 계산의 비밀은?',
+   choices:['자리끼리(백은 백, 십은 십) 더하면 된다','무조건 다 외워야 한다','큰 수는 더할 수 없다'], a:0,
+   yes:'바로 <b>자릿값</b>의 비밀! 아무리 큰 수도 같은 자리끼리 더하면 끝이야.'},
+  {show:'27 + 5는?<br>7+5=12 … 어, 12는 한 자리에 못 들어가!',
+   q:'12의 "1"은 어디로 보내야 할까?',
+   choices:['십의 자리로 올려 준다 (받아올림)','지워 버린다','일의 자리에 그냥 둔다'], a:0,
+   yes:'10이 모이면 윗자리로 이사! 이게 <b>받아올림</b>이야. 빼기에서 빌려오는 건 받아내림!'},
+];
+DISCOVER.shape=[
+  {show:svgLine('seg')+'<br>'+svgLine('line')+'<br>'+svgLine('ray'),
+   q:'세 선의 다른 점은 무엇일까?',
+   choices:['끝(점)이 있는지, 어느 쪽으로 뻗는지','색깔','굵기'], a:0,
+   yes:'정확해! 끝이 둘 다 있으면 <b>선분</b>, 양쪽으로 끝없이 <b>직선</b>, 한쪽만 <b>반직선</b>이야.'},
+  {show:'<div style="text-align:center">'+svgAngle(90)+svgAngle(45)+'</div>',
+   q:'왼쪽 각은 종이 모서리와 똑같이 반듯해! 이런 각을 뭐라고 할까?',
+   choices:['직각','반각','세모각'], a:0,
+   yes:'<b>직각</b>! 직각을 알면 직각삼각형·직사각형·정사각형이 모두 풀려.'},
+];
+DISCOVER.circle=[
+  {show:'⭕ 원 위의 어느 점이든…<br>중심에서 위로 3cm, 아래로 3cm,<br>옆으로도 3cm, 비스듬히도 3cm!',
+   q:'원의 가장 큰 비밀은 무엇일까?',
+   choices:['중심에서 어디든 거리가 같다','위쪽이 더 멀다','거리가 제각각이다'], a:0,
+   yes:'그래서 컴퍼스로 원을 그릴 수 있는 거야 — 벌린 길이(반지름)가 변하지 않으니까!'},
+];
+DISCOVER.deci=[
+  {show:fracBar(10,1)+'<br>1을 똑같이 10칸으로 나눈 한 칸',
+   q:'이 한 칸을 나타내는 두 가지 방법은?',
+   choices:['1/10 = 0.1','1/10 = 10','0.1 = 1'], a:0,
+   yes:'<b>소수</b>는 분수의 다른 옷이야! 1/10=0.1, 3/10=0.3. 가운데 점이 소수점!'},
+];
+DISCOVER.graph=[
+  {show:'우리 반이 좋아하는 과일<br><br>글로 쓰면: 사과 다섯, 포도 셋, 딸기 일곱…<br>그래프로: 🍎🍎🍎🍎🍎 / 🍇🍇🍇 / 🍓🍓🍓🍓🍓🍓🍓',
+   q:'그래프로 나타내면 뭐가 좋을까?',
+   choices:['많고 적음이 한눈에 보인다','그림이 예뻐진다','숫자를 안 배워도 된다'], a:0,
+   yes:'자료를 <b>정리</b>하면 비교와 결정이 쉬워져! 표와 그래프는 생각을 돕는 도구야.'},
 ];
 
 /* ===================== 시작 + PWA ===================== */
