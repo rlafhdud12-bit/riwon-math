@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg">
-<title>리원이 공부 놀이터 ✨</title>
+<title>초등노트 ✨</title>
 <style>
   :root{ --c:#ff9f43; --c-dark:#e67e22; --bg:#fff9f0; --ink:#33323a; --soft:#7a7785; }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -274,8 +274,8 @@ function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 /* ===================== 저장 (on-device) ===================== */
 const SKEY='riwon_math_v2';
 let DB=loadDB();
-function freshDB(){ return {v:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,think:true,bank:true,review:true,deep:true}, created:Date.now()}; }
-function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; if(d.stages.think===undefined)d.stages.think=true; return d; } }catch(e){} return freshDB(); }
+function freshDB(){ return {v:3, grade:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,think:true,bank:true,review:true,deep:true}, created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; d.grade=d.grade||3; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; if(d.stages.think===undefined)d.stages.think=true; return d; } }catch(e){} return freshDB(); }
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
@@ -414,8 +414,10 @@ function setTheme(u){
 }
 function home(){
   clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); saveDB();
+  const g=DB.grade||3;
+  const gradeBar=[1,2,3,4,5,6].map(n=>`<button onclick="setGrade(${n})" style="border:none;border-radius:14px;padding:8px 13px;font-weight:800;font-size:15px;cursor:pointer;transition:transform .1s;${n===g?'background:#5f27cd;color:#fff;box-shadow:0 3px 8px rgba(95,39,205,.4);transform:scale(1.06)':'background:rgba(255,255,255,.7);color:#5f27cd'}">${n}학년</button>`).join('');
   const sections=SUBJECTS.map(s=>{
-    const us=UNITS.filter(u=>u.subj===s.id);
+    const us=UNITS.filter(u=>(u.grade||3)===g && u.subj===s.id);
     if(!us.length) return '';
     const cards=us.map(u=>{ const cl=unitDB(u.id).clears;
       return `<button class="unit-card" style="background:linear-gradient(135deg,${u.c},${u.cd})" onclick="openUnit('${u.id}')">
@@ -428,22 +430,25 @@ function home(){
   }).join('');
   app.innerHTML=`
     <div class="home-head">
-      <div class="big">리원이 공부 놀이터 ✨</div>
+      <div class="big">초등노트 ✨</div>
       <div class="sub">개념 → 게임 → 퀴즈 → 문제은행 → 복습·분석</div>
     </div>
+    <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:2px 0 14px">${gradeBar}</div>
     <div class="topwallet">
       <span class="wpill">🎟️ 스티커 ${DB.stickers}</span>
       <span class="wpill">🎴 카드 ${DB.cards.length}/${ROSTER.length}</span>
       <span class="wpill">📚 ${DB.totalSolved}문제</span>
       <button class="wpill" onclick="toggleMute()" title="효과음 켜기/끄기">${DB.muted?'🔇':'🔊'}</button>
     </div>
-    ${sections}
+    ${sections||`<div class="credit" style="margin:34px 0;font-size:16px">📚 <b>${g}학년</b> 내용은 곧 추가될 거예요!<br>지금은 위에서 <b>3학년</b>을 골라 즐겨 보세요 😊</div>`}
     <div class="home-btns">
       <button onclick="renderDashboard()">📊 공부 기록</button>
       <button onclick="renderGallery()">🎴 카드 모음</button>
     </div>
     <div class="credit">새로운 단원을 처음 깨면 스티커가 듬뿍! 같은 걸 반복하면 조금씩 모여요.<br>스티커를 모으면 ${GROUP} 멤버 카드를 한 명씩 만날 수 있어요 💖</div>`;
 }
+
+function setGrade(n){ DB.grade=n; saveDB(); home(); }
 
 let curUnit=null, curStage='concept';
 function openUnit(id){ curUnit=UNITS.find(u=>u.id===id); curStage=DISCOVER[id]?'discover':'concept'; setTheme(curUnit); renderUnit(); }
@@ -3041,7 +3046,9 @@ DISCOVER.graph=[
 
 /* ===================== 시작 + PWA ===================== */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
-home();
 </script>
+<!-- 학년별 콘텐츠 (추가되는 학년마다 여기에 등록). 엔진 정의 후 로드되어 UNITS/MODULES 등에 등록됨 -->
+<script src="grades/g1.js"></script>
+<script>home();</script>
 </body>
 </html>
