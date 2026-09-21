@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#ff9f43">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="리원수학">
+<meta name="apple-mobile-web-app-title" content="초등노트">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg">
@@ -212,6 +212,25 @@
   .idol-pop .pop-bubble{background:#fff; border:2px solid var(--c); border-radius:16px 16px 16px 4px; padding:10px 14px; font-weight:800; font-size:15px; box-shadow:0 6px 16px rgba(0,0,0,.14); color:var(--ink);}
   .idol-pop .pop-bubble b{color:var(--c-dark);}
 
+  /* 선생님 채팅 */
+  .chat-wrap{position:fixed; inset:0; z-index:150; background:var(--bg,#fff9f0); display:flex; flex-direction:column;}
+  .chat-top{display:flex; align-items:center; gap:10px; padding:12px 14px; background:#fff; border-bottom:2px solid #f1e6d8;}
+  .chat-top .t{font-weight:900; font-size:17px; flex:1;}
+  .chat-log{flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px;}
+  .msg{max-width:84%; padding:11px 14px; border-radius:18px; font-weight:700; font-size:15.5px; line-height:1.5; white-space:pre-wrap; word-break:keep-all;}
+  .msg.me{align-self:flex-end; background:var(--c,#ff9f43); color:#fff; border-bottom-right-radius:5px;}
+  .msg.t{align-self:flex-start; background:#fff; border:2px solid #f1e6d8; border-bottom-left-radius:5px;}
+  .msg.sys{align-self:center; background:none; color:var(--soft); font-size:13px; font-weight:700;}
+  .chat-in{display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:2px solid #f1e6d8;}
+  .chat-in input{flex:1; border:2px solid #eee; border-radius:16px; padding:12px 14px; font-size:16px; font-weight:700; outline:none;}
+  .chat-in input:focus{border-color:var(--c,#ff9f43);}
+  .chat-in button{background:var(--c,#ff9f43); color:#fff; border-radius:16px; padding:0 18px; font-weight:900; font-size:16px;}
+  .chat-in button:disabled{opacity:.5;}
+  .chips{display:flex; gap:8px; padding:0 12px 8px; overflow-x:auto; background:#fff;}
+  .chips button{flex:0 0 auto; background:#fff5e8; border:2px solid #ffd9a8; border-radius:14px; padding:7px 12px; font-size:13.5px; font-weight:800; color:var(--ink);}
+  .askbtn{display:block; width:100%; margin-top:10px; padding:13px; border-radius:16px; background:#fff; border:2px solid #54a0ff; color:#2e6fd1; font-weight:900; font-size:16px;}
+  .sync-dot{font-size:12px; color:var(--soft); font-weight:700;}
+
   /* 꽃가루 */
   #confetti{position:fixed; inset:0; pointer-events:none; z-index:99; overflow:hidden;}
   .conf{position:absolute; width:10px; height:14px; top:-20px; border-radius:2px; animation:fall linear forwards;}
@@ -225,7 +244,7 @@
 <script>
 "use strict";
 /* =========================================================
-   리원이 수학 놀이터 v2
+   초등노트 v3 (전담 과외: 자동 백업 + 선생님 채팅)
    개념(다양한 방법) → 그림게임(여러 종류) → 퀴즈 → 문제은행 → 복습/분석
    + 스티커/경험치(반복 보상 체감) + 아이돌 캐릭터 카드 수집 + 응원 팝업
    + 공부 기록(부모용 대시보드) + on-device 저장 + PWA(오프라인/홈화면)
@@ -279,6 +298,88 @@ function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
+
+/* ===================== 전담 과외 (자동 백업 + 선생님 채팅) ===================== */
+const TUTOR_API='https://chodeung-tutor.netlify.app';
+function learnerId(){
+  // 기기별 익명 ID(이름 없음). 백업 파일을 다른 기기에 불러오면 ID도 같이 옮겨진다.
+  if(!DB.lid){ DB.lid=Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b=>(b%36).toString(36)).join('')+Date.now().toString(36).slice(-4); saveDB(); }
+  return DB.lid;
+}
+let syncTimer=null, syncBusy=false;
+function syncSoon(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 1500); }
+async function syncNow(){
+  if(syncBusy||!navigator.onLine) return; syncBusy=true;
+  try{
+    const db=Object.assign({},DB); delete db.fam; // 가족 사진 카드는 절대 안 보냄
+    const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
+    if(r.ok){ DB.lastSync=Date.now(); saveDB(); const d=document.getElementById('sync-dot'); if(d) d.textContent='☁️ 방금 저장됨'; }
+  }catch(e){}
+  syncBusy=false;
+}
+window.addEventListener('online', syncSoon);
+function syncLabel(){ if(!DB.lastSync) return '☁️ 아직 저장 전'; return '☁️ '+fmtAgo(DB.lastSync)+' 저장'; }
+
+/* 최근 약점(전 단원) — 선생님에게 같이 보내는 힌트 */
+function weakList(){
+  const all=[]; UNITS.forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) all.push({n:u.name+'·'+c,w:cats[c].wrong}); } });
+  return all.sort((a,b)=>b.w-a.w).slice(0,5).map(x=>x.n);
+}
+let CHAT=null;
+function openChat(ctx){
+  clearTimers();
+  CHAT={ctx:ctx||null, msgs:[], busy:false, prev:app.innerHTML, prevStage:curStage};
+  const el=document.createElement('div'); el.className='chat-wrap'; el.id='chat';
+  document.body.appendChild(el);
+  renderChat();
+  const hello=ctx&&ctx.given!==undefined
+    ? '안녕! 방금 문제, 같이 볼까? 왜 그렇게 생각했는지 궁금해. 어떻게 풀었는지 말해 줄래?'
+    : (ctx&&ctx.q ? '안녕! 이 문제 어디가 헷갈려? 편하게 물어봐.' : '안녕! 나는 수학 선생님이야. 궁금한 거 뭐든 물어봐 😊');
+  pushMsg('t',hello,true);
+}
+function closeChat(){ const el=document.getElementById('chat'); if(el) el.remove(); CHAT=null; }
+function renderChat(){
+  const el=document.getElementById('chat'); if(!el||!CHAT) return;
+  const ctx=CHAT.ctx;
+  const chips=ctx&&ctx.q?['왜 틀렸어?','다른 방법으로 설명해 줘','힌트만 줘','이건 왜 그래?']:['곱셈이 헷갈려','나눗셈 알려 줘','분수가 어려워','받아올림이 헷갈려'];
+  el.innerHTML=`
+    <div class="chat-top"><button class="back" onclick="closeChat()">←</button><div class="t">🙋 선생님한테 물어보기</div><span class="sync-dot" id="chat-left"></span></div>
+    <div class="chat-log" id="chat-log">${ctx&&ctx.q?`<div class="msg sys">📌 ${ctx.q.replace(/<[^>]+>/g,'')}${ctx.given!==undefined?` · 내 답: ${ctx.given}`:''}</div>`:''}</div>
+    <div class="chips">${chips.map(c=>`<button onclick="sendChat(${JSON.stringify(c)})">${c}</button>`).join('')}</div>
+    <div class="chat-in"><input id="chat-input" placeholder="선생님한테 말해 봐…" maxlength="300" onkeydown="if(event.key==='Enter'){sendChat()}"><button id="chat-send" onclick="sendChat()">보내기</button></div>`;
+  CHAT.msgs.forEach(m=>appendBubble(m.role==='user'?'me':'t',m.content));
+}
+function appendBubble(kind,text){
+  const log=document.getElementById('chat-log'); if(!log) return;
+  const d=document.createElement('div'); d.className='msg '+kind; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; return d;
+}
+function pushMsg(kind,text,noStore){
+  appendBubble(kind,text);
+  if(!noStore) CHAT.msgs.push({role:kind==='me'?'user':'assistant',content:text});
+}
+async function sendChat(preset){
+  if(!CHAT||CHAT.busy) return;
+  const inp=document.getElementById('chat-input');
+  const text=(preset||(inp&&inp.value)||'').trim(); if(!text) return;
+  if(inp) inp.value='';
+  pushMsg('me',text);
+  CHAT.busy=true; const btn=document.getElementById('chat-send'); if(btn) btn.disabled=true;
+  const wait=appendBubble('t','생각 중…');
+  try{
+    const ctx=CHAT.ctx?Object.assign({},CHAT.ctx,{weak:weakList()}):{weak:weakList()};
+    const r=await fetch(TUTOR_API+'/api/tutor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),messages:CHAT.msgs.slice(-12),ctx})});
+    const j=await r.json().catch(()=>({}));
+    wait.remove();
+    pushMsg('t', j.text||'앗, 선생님 연결이 잠깐 안 돼. 다시 눌러 줄래?', !!j.retry);
+    if(typeof j.remaining==='number'){ const l=document.getElementById('chat-left'); if(l) l.textContent=j.remaining<=10?`오늘 ${j.remaining}번 남음`:''; }
+  }catch(e){ wait.remove(); pushMsg('t','인터넷이 안 되나 봐. 연결되면 다시 물어봐 줘!',true); }
+  CHAT.busy=false; if(btn) btn.disabled=false;
+}
+function askAboutCurrent(){
+  const P=PLAY; if(!P||!P.cur) return openChat(null);
+  const c=P.cur, u=UNITS.find(x=>x.id===P.unitId);
+  openChat({unit:u?u.name:'', stage:P.mode, q:c.q, a:c.choices?c.choices[c.a]:c.a, given:c.given, cat:c.cat});
+}
 function unitDB(id){ return DB.units[id] = DB.units[id] || {clears:0, solved:0, correct:0, wrong:0, cats:{}, bank:0, review:0}; }
 
 /* 통계 기록 */
@@ -293,8 +394,11 @@ function markStat(unitId,cat,ok){
 function addWrong(c){
   const key=c.unitId+'|'+c.q;
   const e=DB.wrong.find(w=>w.key===key);
-  if(e) e.miss++;
-  else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, choices:c.choices||null, miss:1});
+  if(e){ e.miss++; if(c.given!==undefined){ e.given=e.given||[]; e.given.push(c.given); } }
+  else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, choices:c.choices||null, miss:1, given:c.given!==undefined?[c.given]:[], t:Date.now()});
+  // 오답 원인 분석용 기록(문제·정답·아이가 쓴 답). 최근 300개만.
+  DB.miss=DB.miss||[]; DB.miss.unshift({t:Date.now(), u:c.unitId, cat:c.cat, q:String(c.q).replace(/<[^>]+>/g,''), a:c.choices?c.choices[c.a]:c.a, g:c.given, tk:c.t?c.t.k:null});
+  if(DB.miss.length>300) DB.miss.length=300;
 }
 function removeFromWrong(c){
   const key=c.key||(c.unitId+'|'+c.q);
@@ -313,18 +417,18 @@ function rewardForClear(n){ return n<CLEAR_REWARD.length?CLEAR_REWARD[n]:1; }
 function addStickers(n){ if(n<=0)return; DB.stickers+=n; DB.stickersEver+=n; }
 
 /* ===================== 아이돌 카드 (오리지널 캐릭터) ===================== */
-const GROUP='리원·도율 포토카드 📸';
+const GROUP='응원단 친구 카드 🎴';
 const ROSTER=[
-  {name:'미소천사 리원', img:'photos/r1.jpg', hair:'#ffd24d', outfit:'#ff7aa2', acc:'⭐', cost:10,  line:'이 미소 주인공처럼 활짝 웃으면서 풀자! ⭐'},
-  {name:'여행가 도율',   img:'photos/d1.jpg', hair:'#7ad0ff', outfit:'#a9c8ff', acc:'✈️', cost:24,  line:'누나 최고! 도율이가 응원해 ✈️'},
-  {name:'반짝반짝 리원', img:'photos/r2.jpg', hair:'#ffb36b', outfit:'#ffd24d', acc:'🌟', cost:42,  line:'두 손 모아 응원 중! 넌 할 수 있어 🌟'},
-  {name:'신난 도율',     img:'photos/d2.jpg', hair:'#7ad0ff', outfit:'#6ce0c0', acc:'🌊', cost:64,  line:'우와~!! 누나 진짜 잘한다!! 🌊'},
-  {name:'물놀이 리원',   img:'photos/r3.jpg', hair:'#9bd6ff', outfit:'#ff9ff3', acc:'🩵', cost:90,  line:'시원하게 한 문제씩! 가보자~ 🩵'},
-  {name:'수영선수 도율', img:'photos/d3.jpg', hair:'#71e0b8', outfit:'#7ad0ff', acc:'🏊', cost:120, line:'풍덩! 어려운 문제도 헤엄쳐 건너자 🏊'},
-  {name:'멋쟁이 리원',   img:'photos/r4.jpg', hair:'#b18cff', outfit:'#8fa3c8', acc:'🎓', cost:155, line:'교복도 멋진 우리 리원, 공부도 멋져! 🎓'},
-  {name:'꼬마 리원',     img:'photos/r5.jpg', hair:'#ff8fb1', outfit:'#ffd24d', acc:'🍓', cost:195, line:'아기 때부터 이렇게 똑똑했답니다 🍓'},
-  {name:'토끼안경 리원', img:'photos/r6.jpg', hair:'#ff9ff3', outfit:'#ffb36b', acc:'🐰', cost:240, line:'토끼처럼 깡총! 문제도 깡총 넘자 🐰'},
-  {name:'제주 남매',     img:'photos/b1.jpg', hair:'#6ce0c0', outfit:'#ffd24d', acc:'🌴', cost:290, line:'리원·도율 남매가 함께 응원해! 🌴'},
+  {name:'미소천사',   hair:'#ffd24d', outfit:'#ff7aa2', acc:'⭐', cost:10,  line:'활짝 웃으면서 한 문제씩 풀어 보자! ⭐'},
+  {name:'반짝이',     hair:'#7ad0ff', outfit:'#a9c8ff', acc:'✨', cost:24,  line:'천천히 또박또박, 그거면 충분해 ✨'},
+  {name:'집중왕',     hair:'#ffb36b', outfit:'#ffd24d', acc:'🌟', cost:42,  line:'두 손 모아 응원 중! 넌 할 수 있어 🌟'},
+  {name:'호기심 대장', hair:'#6ce0c0', outfit:'#6ce0c0', acc:'🔍', cost:64,  line:'"왜 그럴까?" 궁금해하는 네가 최고야 🔍'},
+  {name:'용감이',     hair:'#9bd6ff', outfit:'#ff9ff3', acc:'🩵', cost:90,  line:'어려워도 한 번 더! 그게 진짜 용기야 🩵'},
+  {name:'파도타기',   hair:'#71e0b8', outfit:'#7ad0ff', acc:'🏄', cost:120, line:'어려운 문제도 파도처럼 슝~ 넘어가자 🏄'},
+  {name:'똑똑이',     hair:'#b18cff', outfit:'#8fa3c8', acc:'🧠', cost:155, line:'틀린 이유를 찾아내는 건 진짜 똑똑한 거야 🧠'},
+  {name:'꼬마박사',   hair:'#ff8fb1', outfit:'#ffd24d', acc:'🎓', cost:195, line:'작은 박사님, 오늘도 한 걸음! 🎓'},
+  {name:'딸기요정',   hair:'#ff9ff3', outfit:'#ffb36b', acc:'🍓', cost:240, line:'달콤한 칭찬 한 스푼! 포기 안 한 너에게 🍓'},
+  {name:'여행가',     hair:'#6ce0c0', outfit:'#ffd24d', acc:'🌴', cost:290, line:'수학 나라 여행, 같이 가자! 🌴'},
   {name:'초아',  hair:'#ffd24d', outfit:'#71e0b8', acc:'✨', cost:345, line:'초아는 알아, 넌 매일 자라고 있어 ✨'},
   {name:'달이',  hair:'#a9b4ff', outfit:'#ff9f43', acc:'🌙', cost:410, line:'달이랑 끝까지! 오늘도 수고했어 🌙'},
 ];
@@ -357,8 +461,8 @@ function checkCardUnlocks(){
 const LINES={
   streak:['{n}문제 연속 정답! 불났어 🔥','연속 {n}개! 집중력 최고 ✨','와 {n}연속! 멈추지 마 💪','{n}개 연속이라니 진짜 잘한다 💖'],
   comeback:['다시 도전해서 맞혔어! 이게 진짜 실력 👏','틀려도 포기 안 하니까 결국 해냈네 🌟','복습의 힘! 완전 멋져 💖','어려운 걸 다시 맞혔어, 대단해!'],
-  praise:['잘하고 있어 리원아 💕','오, 정확해! ✨','좋았어, 그거야!','리원이 똑똑해 🧠💖','이 속도면 금방 마스터!','집중력 멋지다 👍'],
-  clear:['한 단원 클리어! 너무 자랑스러워 🏆','챕터 깼다! 리원이 짱 💖','오늘도 해냈어, 최고야 ✨'],
+  praise:['잘하고 있어 💕','오, 정확해! ✨','좋았어, 그거야!','생각하는 힘이 멋져 🧠💖','차근차근, 아주 좋아!','집중력 멋지다 👍'],
+  clear:['한 단원 클리어! 너무 자랑스러워 🏆','챕터 깼다! 정말 짱 💖','오늘도 해냈어, 최고야 ✨'],
 };
 let popupTimer=null, lastPopupAt=0;
 function idolArt(c){ return c.img?`<img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover">`:idolFace(c); }
@@ -441,10 +545,12 @@ function home(){
       <button class="wpill" onclick="toggleMute()" title="효과음 켜기/끄기">${DB.muted?'🔇':'🔊'}</button>
     </div>
     ${sections||`<div class="credit" style="margin:34px 0;font-size:16px">📚 <b>${g}학년</b> 내용은 곧 추가될 거예요!<br>지금은 위에서 <b>3학년</b>을 골라 즐겨 보세요 😊</div>`}
+    <button class="askbtn" onclick="openChat(null)">💬 선생님한테 물어보기</button>
     <div class="home-btns">
       <button onclick="renderDashboard()">📊 공부 기록</button>
       <button onclick="renderGallery()">🎴 카드 모음</button>
     </div>
+    <div class="credit" style="margin-top:6px"><span id="sync-dot">${syncLabel()}</span></div>
     <div class="credit">새로운 단원을 처음 깨면 스티커가 듬뿍! 같은 걸 반복하면 조금씩 모여요.<br>스티커를 모으면 ${GROUP} 멤버 카드를 한 명씩 만날 수 있어요 💖</div>`;
 }
 
@@ -604,6 +710,7 @@ function choosePick(i){
 function submit(){
   const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
+  c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
   markStat(P.unitId,c.cat,ok);
   const ansEl=$('#ans');
   if(c.choices){ c.choices.forEach((_,i)=>{ const b=$('#ch'+i); if(!b)return; b.disabled=true;
@@ -629,8 +736,8 @@ function submit(){
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
     else { const e=DB.wrong.find(w=>w.key===c.key); if(e)e.miss++; P.queue.push(c); }
     saveDB();
-    const help=(P.mode==='bank'||P.mode==='review')?`<button class="bigbtn ghost" onclick="openHelp()">🙋 왜 틀렸을까? 차근차근 보기</button>`:'';
-    const pc=$('#play-controls'); if(pc) pc.innerHTML=help+`<button class="bigbtn" onclick="advance()">다음 문제로 ▶</button>`;
+    const help=(P.mode==='bank'||P.mode==='review')?`<button class="bigbtn ghost" onclick="openHelp()">🙋 차근차근 풀이 보기</button>`:'';
+    const pc=$('#play-controls'); if(pc) pc.innerHTML=help+`<button class="askbtn" onclick="askAboutCurrent()">💬 선생님, 왜 틀렸어?</button><button class="bigbtn" onclick="advance()">다음 문제로 ▶</button>`;
   }
 }
 function stopPlay(){ clearTimers(); if(PLAY.mode==='bank') finishBank(); else finishReview(); }
@@ -679,7 +786,7 @@ function finishMaster(){
     subText=ud.clears>=CLEAR_REWARD.length?'다음 클리어도 +1 (이제 새 단원에 도전!)':'다음 클리어는 +'+rewardForClear(ud.clears)+' — 너무 같은 것만 반복하지 말고 새 단원도!';
   }
   addStickers(reward);
-  const newCards=checkCardUnlocks(); saveDB();
+  const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   let stars,msg;
   if(P.retry===0){ stars='⭐⭐⭐'; msg='한 번도 안 틀렸어요! 완벽해요!'; }
   else if(P.retry<=3){ stars='⭐⭐'; msg='거의 다 맞혔어요. 정말 잘했어요!'; }
@@ -704,7 +811,7 @@ function finishBank(){
   const P=PLAY; P.cur=null; const correct=P.count-P.wrongCount;
   const reward=Math.floor(correct/10); addStickers(reward);
   unitDB(P.unitId).bank+=P.count; if(P.count>0) logEvent(P.unitId,'bank',P.count);
-  const newCards=checkCardUnlocks(); saveDB();
+  const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   const acc=P.count?Math.round(correct/P.count*100):0; const worst=worstCat(P.unitId);
   confetti(true); sfx('win');
   P.body.innerHTML=`
@@ -723,7 +830,7 @@ function finishBank(){
 function finishReview(){
   const P=PLAY; P.cur=null; const reward=Math.floor(P.fixed/2); addStickers(reward);
   unitDB(P.unitId).review+=P.fixed; if(P.fixed>0) logEvent(P.unitId,'review',P.fixed);
-  const newCards=checkCardUnlocks(); saveDB();
+  const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   confetti(true); sfx('win');
   P.body.innerHTML=`
     <div class="result card">
@@ -834,7 +941,7 @@ function exportData(){
   try{
     const blob=new Blob([JSON.stringify(DB)],{type:'application/json'});
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download='리원수학_백업_'+todayKey()+'.json';
+    a.href=URL.createObjectURL(blob); a.download='초등노트_백업_'+todayKey()+'.json';
     document.body.appendChild(a); a.click(); a.remove();
   }catch(e){ alert('백업 저장에 실패했어요.'); }
 }
@@ -900,7 +1007,7 @@ function addFamilyCard(input){
       const ctx=cv.getContext('2d');
       ctx.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,0,0,300,340);
       const url=cv.toDataURL('image/jpeg',.82);
-      const name=(prompt('이 카드의 이름을 지어줘! (예: 엄마, 도율이)','우리가족')||'우리가족').slice(0,8);
+      const name=(prompt('이 카드의 이름을 지어줘! (예: 엄마, 동생)','우리가족')||'우리가족').slice(0,8);
       DB.fam.push({name, img:url, line:name+'! 항상 응원해 💖'});
       saveDB(); input.value=''; renderGallery();
     };
@@ -2399,7 +2506,7 @@ const TALK={
   eng1:['한글과 알파벳, 닮은 점과 다른 점을 하나씩 찾아보자!','내 이름을 알파벳으로 써 보고 첫 글자를 대문자로 만들어 보자!'],
   eng2:['외국 친구가 전학 온다면 어떤 영어 인사를 해 주고 싶어?','집 안 물건 3개를 영어로 말해 보자. 모르면 같이 찾아보기!'],
   sci1:['집에서 자석이 숨어 있는 물건을 3개 찾아보자! (냉장고 말고 또?)','자석으로 할 수 있는 새로운 발명품을 상상해서 그려 보자!'],
-  sci2:['사람의 한살이는 어떻게 될까? 아기 → ? → ? 같이 채워 보자!','리원이가 아기였을 때 사진을 보며 어떻게 자랐는지 이야기해 보자!'],
+  sci2:['사람의 한살이는 어떻게 될까? 아기 → ? → ? 같이 채워 보자!','네가 아기였을 때 사진을 보며 어떻게 자랐는지 이야기해 보자!'],
   soc1:['30년 뒤엔 어떤 교통수단이 생길까? 상상해서 그려 보자!','할머니·할아버지께 옛날에 쓰던 물건 이야기를 여쭤 보자!'],
   soc2:['우리 동네에 새 공공기관을 만든다면 뭐가 가장 필요할까?','우리 집에서 가장 가까운 소방서·도서관이 어디인지 지도에서 찾아보자!'],
   add:['마트 전단지에서 물건 두 개 값을 더해 보자! 받아올림이 나올까?','사고 싶은 장난감 값에서 지금 모은 용돈을 빼면 얼마나 모자랄까?'],
@@ -3049,6 +3156,6 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 </script>
 <!-- 학년별 콘텐츠 (추가되는 학년마다 여기에 등록). 엔진 정의 후 로드되어 UNITS/MODULES 등에 등록됨 -->
 <script src="grades/g1.js"></script>
-<script>home();</script>
+<script>home(); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon();</script>
 </body>
 </html>
