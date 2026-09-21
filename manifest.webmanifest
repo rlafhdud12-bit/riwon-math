@@ -1,7 +1,7 @@
 {
-  "name": "초등노트",
-  "short_name": "초등노트",
-  "description": "초등 1~6학년 개념·발견·게임·퀴즈·복습 학습 놀이터",
+  "name": "공부노트",
+  "short_name": "공부노트",
+  "description": "우리 아이 전담 과외 공부노트 — 개념·발견·게임·퀴즈·복습 + 선생님 채팅",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#ff9f43">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="초등노트">
+<meta name="apple-mobile-web-app-title" content="공부노트">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg">
-<title>초등노트 ✨</title>
+<title>공부노트 ✨</title>
 <style>
   :root{ --c:#ff9f43; --c-dark:#e67e22; --bg:#fff9f0; --ink:#33323a; --soft:#7a7785; }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -299,6 +299,11 @@ function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.get
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
 
+/* ===================== 아이 이름 (기기 안에만 저장, 코드·공개 저장소엔 없음) ===================== */
+function nameI(n){ const c=n.charCodeAt(n.length-1); return (c>=0xAC00&&c<=0xD7A3&&((c-0xAC00)%28))?n+'이':n; } // 받침 있으면 "○○이"
+function appTitle(){ return DB.name?`${nameI(DB.name)} 공부노트`:'공부노트'; }
+function setChildName(){ if(!parentOK()) return; const n=(prompt('아이 이름을 넣어 주세요. (이 폰에만 저장돼요)',DB.name||'')||'').trim().slice(0,6); if(n){ DB.name=n; saveDB(); } home(); }
+
 /* ===================== 전담 과외 (자동 백업 + 선생님 채팅) ===================== */
 const TUTOR_API='https://chodeung-tutor.netlify.app';
 function learnerId(){
@@ -312,11 +317,54 @@ async function syncNow(){
   if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
-    const db=Object.assign({},DB); delete db.fam; // 가족 사진 카드는 절대 안 보냄
+    const db=Object.assign({},DB); delete db.fam; delete db.cheer; // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
     const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
     if(r.ok){ DB.lastSync=Date.now(); saveDB(); const d=document.getElementById('sync-dot'); if(d) d.textContent='☁️ 방금 저장됨'; }
   }catch(e){}
   syncBusy=false;
+  fetchCheer();
+}
+
+/* ===== 💌 응원 카드: 부모 폰 사진 → 서버 → 아이 폰 (문제 풀 때 그 사진이 응원) ===== */
+let cheerLast=0;
+async function fetchCheer(force){
+  if(!navigator.onLine||(!force&&Date.now()-cheerLast<5*60000)) return false;
+  try{
+    const r=await fetch(TUTOR_API+'/api/cards?id='+encodeURIComponent(learnerId())); if(!r.ok) return false;
+    const j=await r.json(); if(!Array.isArray(j.cards)) return false;
+    cheerLast=Date.now(); const before=DB.cheer||[]; DB.cheer=j.cards; DB.cheerSeen=DB.cheerSeen||0;
+    const fresh=j.cards.filter(c=>c.t>DB.cheerSeen);
+    saveDB();
+    if(fresh.length&&!DB.viewer){ const c=fresh[0]; idolPopup(`💌 새 응원 카드가 도착했어! "${c.line}"`, true, c); DB.cheerSeen=Math.max(...j.cards.map(c=>c.t)); saveDB(); if(!PLAY&&!curUnit) later(home,3000); }
+    return true;
+  }catch(e){ return false; }
+}
+function sendCheerCard(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ const img=new Image();
+    img.onload=async()=>{
+      const cv=document.createElement('canvas'); cv.width=300; cv.height=340;
+      const s=Math.min(img.width,img.height*300/340), sw=s, sh=s*340/300;
+      cv.getContext('2d').drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,0,0,300,340);
+      let q=.8, url=cv.toDataURL('image/jpeg',q); while(url.length>150000&&q>.4){ q-=.1; url=cv.toDataURL('image/jpeg',q); }
+      const name=(prompt('카드 이름 (예: 엄마, 아빠, 할머니)','엄마')||'').trim().slice(0,8); if(!name){ input.value=''; return; }
+      const line=(prompt('아이에게 한마디 (카드에 적혀요)','오늘도 최고! 사랑해 💖')||'').trim().slice(0,60);
+      input.value='';
+      try{
+        const r=await fetch(TUTOR_API+'/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),action:'add',card:{name,line,img:url}})});
+        const j=await r.json().catch(()=>({}));
+        if(r.ok&&j.cards){ DB.cheer=j.cards; DB.cheerSeen=Math.max(DB.cheerSeen||0,...j.cards.map(c=>c.t)); saveDB(); alert('보냈어요! 아이 폰에서 앱을 열면 카드가 도착해요 💌'); }
+        else alert('보내기에 실패했어요. ('+(j.error||r.status)+')');
+      }catch(e){ alert('인터넷 연결을 확인해 주세요.'); }
+      renderGallery();
+    }; img.src=rd.result; };
+  rd.readAsDataURL(f);
+}
+async function removeCheerCard(t){
+  if(!confirm('이 응원 카드를 지울까요? (아이 폰에서도 사라져요)')) return;
+  try{ const r=await fetch(TUTOR_API+'/api/cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),action:'remove',t})}); const j=await r.json(); if(j.cards){ DB.cheer=j.cards; saveDB(); } }catch(e){}
+  renderGallery();
 }
 window.addEventListener('online', syncSoon);
 function syncLabel(){ if(DB.viewer) return '👀 함께 보기 모드 · 아이 기록 '+(DB.lastPull?fmtAgo(DB.lastPull)+' 기준':'불러오는 중'); if(!DB.lastSync) return '☁️ 아직 저장 전'; return '☁️ '+fmtAgo(DB.lastSync)+' 저장'; }
@@ -398,8 +446,8 @@ async function enterFamilyCode(){
   const code=(prompt('아이 폰에 표시된 가족 코드를 입력하세요')||'').trim().toLowerCase();
   if(!/^[a-z0-9]{8,32}$/.test(code)){ if(code) alert('코드 형식이 달라요.'); return; }
   if(!confirm('이 폰은 "함께 보기 모드"가 됩니다.\n아이 폰의 기록을 그대로 보여주고, 이 폰에서 푼 것은 저장하지 않아요. 계속할까요?')) return;
-  const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam}; DB.lid=code; DB.viewer=true; Object.assign(DB,keep); saveDB();
-  const ok=await pullNow(true); if(!ok) alert('아직 아이 폰에서 저장된 기록이 없거나 인터넷이 안 돼요. 아이가 문제를 한 세트 풀면 생겨요.'); home();
+  const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, name:DB.name}; DB.lid=code; DB.viewer=true; Object.assign(DB,keep); saveDB();
+  const ok=await pullNow(true); if(!ok) alert('아직 아이 폰에서 저장된 기록이 없거나 인터넷이 안 돼요. 아이가 문제를 한 세트 풀면 생겨요.'); await fetchCheer(true); home();
 }
 function leaveViewer(){ if(!parentOK()) return; DB.viewer=false; DB.lid=''; saveDB(); learnerId(); home(); }
 let pullBusy=false, lastPull=0;
@@ -409,7 +457,7 @@ async function pullNow(force){
     const r=await fetch(TUTOR_API+'/api/record?id='+encodeURIComponent(DB.lid)); if(!r.ok){ pullBusy=false; return false; }
     const j=await r.json(); if(!j.db){ pullBusy=false; return false; }
     // 부모 폰 자체 설정(PIN·잠금·소리·가족카드·학년)은 유지하고, 학습 기록만 아이 것으로 바꾼다
-    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
+    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, name:DB.name||j.db.name, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
     DB=Object.assign(j.db,keep); saveDB(); lastPull=Date.now(); pullBusy=false; return true;
   }catch(e){ pullBusy=false; return false; }
 }
@@ -500,7 +548,8 @@ const LINES={
 let popupTimer=null, lastPopupAt=0;
 function idolArt(c){ return c.img?`<img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover">`:idolFace(c); }
 function activeIdol(){
-  const pool=DB.cards.map(i=>ROSTER[i]).concat(DB.fam);
+  // 응원 카드(가족)가 있으면 더 자주 등장하게 두 번 넣는다
+  const cheer=DB.cheer||[]; const pool=DB.cards.map(i=>ROSTER[i]).concat(DB.fam, cheer, cheer);
   return pool.length?pick(pool):ROSTER[0];
 }
 function idolPopup(msg, big, forceIdol){
@@ -565,9 +614,10 @@ function home(){
     return `<div class="subj-head"><span>${s.emoji} ${s.name}</span><span class="line"></span></div>
       <div class="unit-grid">${cards}</div>`;
   }).join('');
+  document.title=appTitle()+' ✨';
   app.innerHTML=`
     <div class="home-head">
-      <div class="big">초등노트 ✨</div>
+      <div class="big">${appTitle()} ✨</div>
       <div class="sub">개념 → 게임 → 퀴즈 → 문제은행 → 복습·분석</div>
     </div>
     <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:2px 0 14px">${gradeBar}</div>
@@ -945,10 +995,16 @@ function renderDashboard(){
         return rows+`<p style="font-size:13px;color:var(--soft);margin:10px 0 4px">최근 오답</p>`+recent; })()}
     </div>
     <div class="card">
+      <h3>👧 아이 이름</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">앱 제목이 "<b>${appTitle()}</b>"로 보여요. 이름은 이 폰에만 저장되고 인터넷·코드에는 올라가지 않아요.</p>
+      <button class="bigbtn ghost" onclick="setChildName()">✏️ 이름 ${DB.name?'바꾸기':'넣기'}</button>
+    </div>
+    <div class="card">
       <h3>👨‍👩‍👧 가족 코드 (두 폰에서 같은 기록 보기)</h3>
       ${DB.viewer
         ?`<p style="font-size:13.5px;margin:0 0 10px">이 폰은 <b>함께 보기 모드</b>예요. 아이 폰 기록을 그대로 보여주고, 여기서 푼 건 저장되지 않아요.<br><span style="color:var(--soft)">코드: ${DB.lid}</span></p>
           <button class="bigbtn ghost" onclick="pullNow(true).then(()=>renderDashboard())">🔄 지금 새로 가져오기</button>
+          <button class="bigbtn" style="background:#e056a0" onclick="renderGallery()">💌 응원 카드 보내기 (앨범에서)</button>
           <button class="bigbtn ghost" onclick="leaveViewer()">함께 보기 모드 끄기</button>`
         :`<p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 폰에서는 코드를 보여주고, 부모 폰에서는 코드를 입력하면 같은 기록이 보여요.</p>
           <button class="bigbtn ghost" onclick="showFamilyCode()">📱 이 폰의 가족 코드 보기</button>
@@ -1038,6 +1094,21 @@ function renderGallery(){
       <p style="margin:0;color:var(--soft);font-size:14px">${next?`다음 카드 <b>${next.name}</b>까지 스티커 ${Math.max(0,next.cost-DB.stickersEver)}개!`:'모든 카드를 모았어요! 대단해요 🏆'}</p>
     </div>
     <div class="card"><div class="gallery">${cards}</div></div>
+    <div class="card">
+      <h3>💌 응원 카드 (가족이 보내 준 사진)</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">${DB.viewer?'여기서 사진을 고르면 아이 폰에 카드로 도착해요. 문제 풀 때 그 사진이 응원해 줘요!':'엄마·아빠 폰에서 보낸 카드예요. 문제 풀 때 응원해 줘요!'}<br>사진은 우리 가족 서버에만 저장돼요.</p>
+      <div class="gallery">
+        ${(DB.cheer||[]).map(c=>`<div class="idol-card">
+          <div class="idol-art"><img src="${c.img}" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+          <div class="idol-name">${c.name}</div>
+          <div class="idol-cost" style="font-size:11.5px;line-height:1.3">${c.line}${DB.viewer?`<br><button style="background:none;border:none;color:#e8503a;font-weight:800;cursor:pointer" onclick="removeCheerCard(${c.t})">삭제</button>`:''}</div>
+        </div>`).join('')}
+        ${DB.viewer?`<button class="idol-card" style="border:3px dashed #e056a0;background:var(--bg);min-height:120px;font-size:34px;color:#b8377f" onclick="document.getElementById('cheerfile').click()">💌<div style="font-size:12px;font-weight:800">앨범에서 보내기</div></button>`:''}
+        ${!(DB.cheer||[]).length&&!DB.viewer?'<p style="color:var(--soft);font-size:13px">아직 도착한 카드가 없어요.</p>':''}
+      </div>
+      <input type="file" id="cheerfile" accept="image/*" style="display:none" onchange="sendCheerCard(this)">
+      ${!DB.viewer?`<button class="bigbtn ghost" style="margin-top:10px" onclick="fetchCheer(true).then(()=>renderGallery())">🔄 새 카드 확인</button>`:''}
+    </div>
     <div class="card">
       <h3>📷 우리 가족 응원단</h3>
       <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">가족·친구 사진을 카드로 만들면, 문제 풀 때 그 사진이 응원해줘요!<br>사진은 <b>이 기기에만</b> 저장돼요 (인터넷에 안 올라감)</p>
@@ -3242,8 +3313,8 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="grades/g3-time.js"></script>
 <script>
 home();
-if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
-else if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon();
+if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
+else { fetchCheer(true); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
 </script>
 </body>
 </html>
