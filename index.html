@@ -293,8 +293,8 @@ function later(fn,ms){ const t=setTimeout(fn,ms); timers.push(t); return t; }
 /* ===================== 저장 (on-device) ===================== */
 const SKEY='riwon_math_v2';
 let DB=loadDB();
-function freshDB(){ return {v:3, grade:3, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,think:true,bank:true,review:true,deep:true}, created:Date.now()}; }
-function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; d.grade=d.grade||3; if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; if(d.stages.think===undefined)d.stages.think=true; return d; } }catch(e){} return freshDB(); }
+function freshDB(){ return {v:3, grade:3, locked:{1:true,2:true,4:true,5:true,6:true}, totalSolved:0, totalCorrect:0, studySeconds:0, stickers:0, stickersEver:0, cards:[], units:{}, wrong:[], log:[], days:{}, fam:[], muted:false, stages:{game:true,think:true,bank:true,review:true,deep:true}, created:Date.now()}; }
+function loadDB(){ try{ const d=JSON.parse(localStorage.getItem(SKEY)); if(d&&d.units){ d.days=d.days||{}; d.fam=d.fam||[]; d.log=d.log||[]; d.grade=d.grade||3; if(!d.locked){ d.locked={1:true,2:true,4:true,5:true,6:true}; if(d.grade!==3) d.grade=3; } if(typeof d.muted!=='boolean')d.muted=false; if(!d.stages)d.stages={game:true,bank:true,review:true,deep:true}; if(d.stages.think===undefined)d.stages.think=true; return d; } }catch(e){} return freshDB(); }
 function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dayRec(){ const k=todayKey(); return DB.days[k]=DB.days[k]||{s:0,c:0,sec:0}; }
 function saveDB(){ try{ localStorage.setItem(SKEY, JSON.stringify(DB)); }catch(e){} }
@@ -309,6 +309,7 @@ function learnerId(){
 let syncTimer=null, syncBusy=false;
 function syncSoon(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow, 1500); }
 async function syncNow(){
+  if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
     const db=Object.assign({},DB); delete db.fam; // 가족 사진 카드는 절대 안 보냄
@@ -318,7 +319,7 @@ async function syncNow(){
   syncBusy=false;
 }
 window.addEventListener('online', syncSoon);
-function syncLabel(){ if(!DB.lastSync) return '☁️ 아직 저장 전'; return '☁️ '+fmtAgo(DB.lastSync)+' 저장'; }
+function syncLabel(){ if(DB.viewer) return '👀 함께 보기 모드 · 아이 기록 '+(DB.lastPull?fmtAgo(DB.lastPull)+' 기준':'불러오는 중'); if(!DB.lastSync) return '☁️ 아직 저장 전'; return '☁️ '+fmtAgo(DB.lastSync)+' 저장'; }
 
 /* 최근 약점(전 단원) — 선생님에게 같이 보내는 힌트 */
 function weakList(){
@@ -378,7 +379,39 @@ async function sendChat(preset){
 function askAboutCurrent(){
   const P=PLAY; if(!P||!P.cur) return openChat(null);
   const c=P.cur, u=UNITS.find(x=>x.id===P.unitId);
-  openChat({unit:u?u.name:'', stage:P.mode, q:c.q, a:c.choices?c.choices[c.a]:c.a, given:c.given, cat:c.cat});
+  openChat({unit:u?u.name:'', stage:P.mode, q:c.q, a:c.choices?c.choices[c.a]:c.a, given:c.given, cat:c.cat, why:c.why||undefined});
+}
+
+/* ===== 학년 잠금(부모 PIN) + 가족 코드(다른 폰에서 같은 기록 보기) ===== */
+function parentOK(){
+  if(!DB.pin){ const p=prompt('부모 확인용 숫자 4자리를 정해 주세요. (학년 잠금·설정을 바꿀 때 씁니다)'); if(!p||!/^\d{4}$/.test(p)){ alert('숫자 4자리로 정해 주세요.'); return false; } DB.pin=p; saveDB(); alert('설정했어요! 잊지 마세요 🙂'); return true; }
+  const p=prompt('부모 확인 숫자 4자리'); if(p===DB.pin) return true; if(p!==null) alert('숫자가 달라요.'); return false;
+}
+function isLocked(n){ return !!(DB.locked&&DB.locked[n]); }
+function tryGrade(n){
+  if(isLocked(n)){ if(!parentOK()) return; DB.locked[n]=false; saveDB(); }
+  setGrade(n);
+}
+function toggleLock(n){ if(!parentOK()) return; DB.locked=DB.locked||{}; DB.locked[n]=!DB.locked[n]; if(DB.locked[n]&&DB.grade===n) DB.grade=3; saveDB(); renderDashboard(); }
+function showFamilyCode(){ alert('가족 코드: '+learnerId()+'\n\n다른 폰의 초등노트에서 [공부 기록 → 가족 코드 입력]에 이 코드를 넣으면 같은 기록이 보여요.'); }
+async function enterFamilyCode(){
+  const code=(prompt('아이 폰에 표시된 가족 코드를 입력하세요')||'').trim().toLowerCase();
+  if(!/^[a-z0-9]{8,32}$/.test(code)){ if(code) alert('코드 형식이 달라요.'); return; }
+  if(!confirm('이 폰은 "함께 보기 모드"가 됩니다.\n아이 폰의 기록을 그대로 보여주고, 이 폰에서 푼 것은 저장하지 않아요. 계속할까요?')) return;
+  const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam}; DB.lid=code; DB.viewer=true; Object.assign(DB,keep); saveDB();
+  const ok=await pullNow(true); if(!ok) alert('아직 아이 폰에서 저장된 기록이 없거나 인터넷이 안 돼요. 아이가 문제를 한 세트 풀면 생겨요.'); home();
+}
+function leaveViewer(){ if(!parentOK()) return; DB.viewer=false; DB.lid=''; saveDB(); learnerId(); home(); }
+let pullBusy=false, lastPull=0;
+async function pullNow(force){
+  if(!DB.viewer||pullBusy||!navigator.onLine) return false; if(!force&&Date.now()-lastPull<60000) return false; pullBusy=true;
+  try{
+    const r=await fetch(TUTOR_API+'/api/record?id='+encodeURIComponent(DB.lid)); if(!r.ok){ pullBusy=false; return false; }
+    const j=await r.json(); if(!j.db){ pullBusy=false; return false; }
+    // 부모 폰 자체 설정(PIN·잠금·소리·가족카드·학년)은 유지하고, 학습 기록만 아이 것으로 바꾼다
+    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
+    DB=Object.assign(j.db,keep); saveDB(); lastPull=Date.now(); pullBusy=false; return true;
+  }catch(e){ pullBusy=false; return false; }
 }
 function unitDB(id){ return DB.units[id] = DB.units[id] || {clears:0, solved:0, correct:0, wrong:0, cats:{}, bank:0, review:0}; }
 
@@ -397,7 +430,7 @@ function addWrong(c){
   if(e){ e.miss++; if(c.given!==undefined){ e.given=e.given||[]; e.given.push(c.given); } }
   else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, choices:c.choices||null, miss:1, given:c.given!==undefined?[c.given]:[], t:Date.now()});
   // 오답 원인 분석용 기록(문제·정답·아이가 쓴 답). 최근 300개만.
-  DB.miss=DB.miss||[]; DB.miss.unshift({t:Date.now(), u:c.unitId, cat:c.cat, q:String(c.q).replace(/<[^>]+>/g,''), a:c.choices?c.choices[c.a]:c.a, g:c.given, tk:c.t?c.t.k:null});
+  DB.miss=DB.miss||[]; DB.miss.unshift({t:Date.now(), u:c.unitId, cat:c.cat, q:String(c.q).replace(/<[^>]+>/g,''), a:c.choices?c.choices[c.a]:c.a, g:c.given, tk:c.t?c.t.k:null, why:c.why||null});
   if(DB.miss.length>300) DB.miss.length=300;
 }
 function removeFromWrong(c){
@@ -519,7 +552,7 @@ function setTheme(u){
 function home(){
   clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); saveDB();
   const g=DB.grade||3;
-  const gradeBar=[1,2,3,4,5,6].map(n=>`<button onclick="setGrade(${n})" style="border:none;border-radius:14px;padding:8px 13px;font-weight:800;font-size:15px;cursor:pointer;transition:transform .1s;${n===g?'background:#5f27cd;color:#fff;box-shadow:0 3px 8px rgba(95,39,205,.4);transform:scale(1.06)':'background:rgba(255,255,255,.7);color:#5f27cd'}">${n}학년</button>`).join('');
+  const gradeBar=[1,2,3,4,5,6].map(n=>`<button onclick="tryGrade(${n})" style="border:none;border-radius:14px;padding:8px 13px;font-weight:800;font-size:15px;cursor:pointer;transition:transform .1s;${n===g?'background:#5f27cd;color:#fff;box-shadow:0 3px 8px rgba(95,39,205,.4);transform:scale(1.06)':isLocked(n)?'background:rgba(255,255,255,.45);color:#b0a4c9':'background:rgba(255,255,255,.7);color:#5f27cd'}">${isLocked(n)?'🔒 ':''}${n}학년</button>`).join('');
   const sections=SUBJECTS.map(s=>{
     const us=UNITS.filter(u=>(u.grade||3)===g && u.subj===s.id);
     if(!us.length) return '';
@@ -730,7 +763,8 @@ function submit(){
     later(advance,1000);
   } else {
     P.locked=true; P.awaitNext=true; P.streak=0; sfx('no');
-    fb.className='feedback no'; fb.textContent='앗! 정답은 '+ansShow(c)+' 예요. 왜 그런지 천천히 살펴보자 👀'; if(ansEl)ansEl.style.borderColor='#e8503a';
+    c.why=diagnose(c,c.given);
+    fb.className='feedback no'; fb.innerHTML='앗! 정답은 '+ansShow(c)+' 예요.'+(c.why?`<div style="margin-top:6px;font-size:14.5px;color:#7a4a1e">🔍 ${c.why}</div>`:' 왜 그런지 천천히 살펴보자 👀'); if(ansEl)ansEl.style.borderColor='#e8503a';
     $('#hint').classList.add('show');
     if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); }
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
@@ -902,6 +936,31 @@ function renderDashboard(){
     <div class="card"><h3>📚 단원별 공부량</h3>${unitRows}</div>
     <div class="card"><h3>🔎 더 연습이 필요한 유형</h3><div style="display:flex;flex-wrap:wrap">${weak}</div></div>
     <div class="card"><h3>🕒 최근 활동</h3>${logs}</div>
+    <div class="card">
+      <h3>🔍 왜 틀렸을까 (최근 오답 원인)</h3>
+      ${(()=>{ const ms=(DB.miss||[]).slice(0,40); if(!ms.length) return '<p style="color:var(--soft)">아직 오답 기록이 없어요.</p>';
+        const cnt={}; ms.forEach(m=>{ const k=m.why||'(원인 미분류) '+m.cat; cnt[k]=(cnt[k]||0)+1; });
+        const rows=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`<div class="cat-row"><div class="lab"><span style="font-size:13.5px">${k}</span><span>✗${v}</span></div></div>`).join('');
+        const recent=ms.slice(0,5).map(m=>`<div class="logrow"><span style="font-size:13px">${(UNITS.find(u=>u.id===m.u)||{}).emoji||''} ${m.q} → 답 <b>${m.a}</b>, 아이 답 <b style="color:#e8503a">${m.g}</b></span><span class="d">${fmtAgo(m.t)}</span></div>`).join('');
+        return rows+`<p style="font-size:13px;color:var(--soft);margin:10px 0 4px">최근 오답</p>`+recent; })()}
+    </div>
+    <div class="card">
+      <h3>👨‍👩‍👧 가족 코드 (두 폰에서 같은 기록 보기)</h3>
+      ${DB.viewer
+        ?`<p style="font-size:13.5px;margin:0 0 10px">이 폰은 <b>함께 보기 모드</b>예요. 아이 폰 기록을 그대로 보여주고, 여기서 푼 건 저장되지 않아요.<br><span style="color:var(--soft)">코드: ${DB.lid}</span></p>
+          <button class="bigbtn ghost" onclick="pullNow(true).then(()=>renderDashboard())">🔄 지금 새로 가져오기</button>
+          <button class="bigbtn ghost" onclick="leaveViewer()">함께 보기 모드 끄기</button>`
+        :`<p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 폰에서는 코드를 보여주고, 부모 폰에서는 코드를 입력하면 같은 기록이 보여요.</p>
+          <button class="bigbtn ghost" onclick="showFamilyCode()">📱 이 폰의 가족 코드 보기</button>
+          <button class="bigbtn ghost" onclick="enterFamilyCode()">👀 가족 코드 입력 (부모 폰)</button>`}
+    </div>
+    <div class="card">
+      <h3>🔒 학년 잠금 (부모 PIN)</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">잠근 학년은 PIN을 넣어야 열려요. 딴 학년으로 새지 않게!</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${[1,2,3,4,5,6].map(n=>`<button class="wpill" style="${isLocked(n)?'opacity:.55':'border-color:var(--c);color:var(--c-dark)'}" onclick="toggleLock(${n})">${isLocked(n)?'🔒':'🔓'} ${n}학년</button>`).join('')}
+      </div>
+    </div>
     <div class="card">
       <h3>🛠️ 단계 설정 (부모용)</h3>
       <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 수준에 맞게 단계를 켜고 꺼요. 끈 단계는 화면에서 사라지고 번호가 다시 매겨져요. (개념·퀴즈는 항상 보여요)</p>
@@ -1117,6 +1176,30 @@ const TUTOR={
       {type:'done',text:`<b>= ${res}${su}</b>! ✏️`,a:res},
     ];},
 };
+/* ===== 오답 원인 진단: 아이가 쓴 답(given)을 보고 왜 그랬을지 추측 → 한 줄 ===== */
+const DIAG={
+  mul(t,g){ const v=Number(g); if(v===t.a+t.b) return '곱하기(×)를 더하기(+)로 계산했나 봐. ×는 "같은 수를 여러 번 더하기"!';
+    if(v===t.a*(t.b-1)||v===t.a*(t.b+1)||v===(t.a-1)*t.b||v===(t.a+1)*t.b) return '구구단에서 한 칸 옆 답이야. 아깝다! 천천히 한 번만 더 세어 봐.';
+    if(v===t.a-t.b||v===t.b-t.a) return '빼기로 계산했구나. 곱하기는 묶음이 몇 개인지 세는 거야.'; return null; },
+  mulTens(t,g){ const v=Number(g); if(v===(t.a/10)*t.b) return '0을 붙이는 걸 빠뜨렸어! 몇십은 10배니까 답에도 0 하나 더.'; if(v===t.a+t.b) return '더하기로 계산했나 봐.'; return null; },
+  mul2(t,g){ const v=Number(g); const t0=Math.floor(t.a/10)*10,o=t.a%10; if(v===t0*t.b||v===o*t.b) return '쪼갠 두 조각 중 하나만 곱했어. 십의 자리 곱 + 일의 자리 곱, 둘 다!'; if(v===t.a+t.b) return '더하기로 계산했나 봐.'; return null; },
+  divMul(t,g){ const v=Number(g); if(v===t.a-t.b) return '빼기로 풀었구나. 나눗셈은 "몇 곱하기 몇이 이 수?"를 찾는 거야.'; if(v===t.c-1||v===t.c+1) return '구구단 한 칸 옆이야. '+t.b+'단을 다시 외워 보자.'; return null; },
+  divShare(t,g){ return DIAG.divMul(t,g); },
+  divGroup(t,g){ const v=Number(g); if(v===t.a-t.per) return '빼기로 풀었구나. "몇 개씩 몇 묶음"을 세어 봐.'; return null; },
+  conv(t,g){ const v=Number(g); const wrongF=t.f===10?100:t.f===100?10:t.f===60?100:t.f===1000?100:null;
+    if(wrongF&&(v===t.v*wrongF||(t.op==='div'&&v===t.v/wrongF))) return `×${wrongF}이 아니라 ×${t.f}이야. 1${t.bu} = ${t.f}${t.su}!`;
+    if(v===t.v) return '단위를 안 바꾸고 숫자를 그대로 썼어. 작은 단위로 갈 땐 곱하기, 큰 단위로 갈 땐 나누기!';
+    if(t.op==='mul'&&v===t.v/t.f) return '곱해야 하는데 나눴어. 작은 단위로 바꿀 땐 수가 커져야 해.';
+    if(t.op==='div'&&v===t.v*t.f) return '나눠야 하는데 곱했어. 큰 단위로 바꿀 땐 수가 작아져야 해.'; return null; },
+  compound(t,g){ const v=Number(g); if(v===t.big+t.small) return `${t.bu}와 ${t.su}를 그냥 더했어. 1${t.bu} = ${t.f}${t.su}로 먼저 바꿔야 해!`; if(v===t.small) return `${t.bu} 부분을 빠뜨렸어.`; return null; },
+  unitOp(t,g){ const v=Number(g); if(v===t.big+t.sign*t.small) return `단위가 다른데 그냥 계산했어. ${t.bu}를 ${t.su}로 먼저 바꾸기!`; return null; },
+  fracCmp(t,g){ const v=Number(g); if(v===Math.max(t.x,t.y)) return '분모가 클수록 조각이 작아져! 피자를 더 많이 나눌수록 한 조각은 작아지지.'; return null; },
+};
+function diagnose(c,given){
+  try{ if(typeof c.diag==='function'){ const r=c.diag(given); if(r) return r; }
+       if(c.t&&DIAG[c.t.k]){ return DIAG[c.t.k](c.t,given); } }catch(e){}
+  return null;
+}
 function tutorBeats(q){
   if(q.t && TUTOR[q.t.k]) return TUTOR[q.t.k](q.t,q);
   return [{type:'say',text:`천천히 힌트를 같이 보자. 💡 ${q.hint}`},{type:'done',text:`정답은 <b>${q.choices?q.choices[q.a]:q.a}</b>! 이제 직접 ${q.choices?'골라보자':'입력해보자'} ✏️`,a:q.a}];
@@ -3156,6 +3239,11 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 </script>
 <!-- 학년별 콘텐츠 (추가되는 학년마다 여기에 등록). 엔진 정의 후 로드되어 UNITS/MODULES 등에 등록됨 -->
 <script src="grades/g1.js"></script>
-<script>home(); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon();</script>
+<script src="grades/g3-time.js"></script>
+<script>
+home();
+if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
+else if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon();
+</script>
 </body>
 </html>
