@@ -81,10 +81,22 @@
 
   /* ---------- 완료 처리 (엔진 finishMaster/finishReview 가 호출) ---------- */
   function markDone(task,correct,total){ task.done=true; task.correct=correct; task.total=total; task.doneAt=Date.now(); }
+  /* 과제 전부 완료 = 스티커 문이 열리는 유일한 순간.
+     보상 = 기본 5 + 정확도 보너스(첫 시도 90% 이상 과제당 +1, 학업 능력) + 연속 완료 보너스(3·7·14·30·60·100일, 공부 습관) */
+  const STREAK_BONUS={3:3,7:7,14:14,30:30,60:60,100:100};
   window.dailyCheckAll=function(){
     const D=todayTask(); if(!D||D.allDone) return false;
-    if(D.tasks.every(t=>t.done)){ D.allDone=Date.now(); addStickers(5); DB.dailyDoneEver=(DB.dailyDoneEver||0)+1; saveDB(); syncSoon(); return true; }
-    return false;
+    if(!D.tasks.every(t=>t.done)) return false;
+    D.allDone=Date.now(); DB.dailyDoneEver=(DB.dailyDoneEver||0)+1;
+    const acc=D.tasks.filter(t=>t.total>0&&t.correct/t.total>=0.9).length;
+    const streak=dailyStreak(); const sb=STREAK_BONUS[streak]||0;
+    D.reward={base:5, acc, streak:sb, total:5+acc+sb};
+    addStickers(D.reward.total, true);
+    saveDB(); syncSoon(); return true;
+  };
+  window.dailyRewardText=function(D){
+    const r=D&&D.reward; if(!r) return '';
+    return `🎟️ 스티커 +${r.total} <span style="font-size:13px;font-weight:700;color:var(--soft)">(과제 완료 ${r.base}${r.acc?` · 정확도 보너스 +${r.acc}`:''}${r.streak?` · 🔥 ${dailyStreak()}일 연속 보너스 +${r.streak}`:''})</span>`;
   };
   // 반환값 true = 과제 화면을 직접 그렸으니 엔진은 기본 결과 화면을 그리지 말 것
   window.dailyOnFinish=function(P){
@@ -94,15 +106,16 @@
       const total=P.mode==='review'?P.startN:P.total, correct=P.mode==='review'?P.fixed:(P.total-Math.min(P.retry,P.total));
       const firstTry=P.mode==='review'?P.fixed:P.solved.size-P.retry; // 첫 시도에 맞힌 수(재도전 제외)
       markDone(task,Math.max(0,firstTry),total);
-      const reward=3; addStickers(reward); logEvent(P.unitId,'daily',1);
+      logEvent(P.unitId,'daily',1);
       const all=dailyCheckAll(); const newCards=checkCardUnlocks(); saveDB(); syncSoon();
-      confetti(all); sfx('win'); idolPopup(all?'오늘 과제 다 했다!! 정말 자랑스러워 🏆':'과제 하나 끝! 잘했어 ✨', true);
-      const left=D.tasks.filter(t=>!t.done);
+      confetti(all); sfx('win'); idolPopup(all?'오늘 과제 다 했다!! 이제 스티커 문이 열렸어 🏆':'과제 하나 끝! 잘했어 ✨', true);
+      const left=D.tasks.filter(t=>!t.done); const accOk=total>0&&firstTry/total>=0.9;
       P.body.innerHTML=`<div class="result card">
         <div class="stars">${all?'🏆🎉':'✅'}</div>
         <h2>${task.title} 완료!</h2>
-        <div class="msg">${total}문제 중 처음에 바로 맞힌 문제 <b>${Math.max(0,firstTry)}개</b>${P.mode!=='review'&&P.retry?` · 다시 풀어 맞힌 ${P.retry}개`:''}</div>
-        <div class="reward-banner">🎟️ 스티커 +${reward}${all?' · 오늘 과제 전부 완료 보너스 +5 🎁':''}</div>
+        <div class="msg">${total}문제 중 처음에 바로 맞힌 문제 <b>${Math.max(0,firstTry)}개</b>${P.mode!=='review'&&P.retry?` · 다시 풀어 맞힌 ${P.retry}개`:''}${accOk?' · 🎯 정확도 90% 이상!':''}</div>
+        ${all?`<div class="reward-banner">${dailyRewardText(D)}</div><div class="tipbox" style="text-align:center">✨ 이제부터 더 푸는 건 전부 <b>보너스 스티커</b>! 문제은행·심화·다른 단원 도전해 봐.</div>`
+             :`<div class="tipbox" style="text-align:center">📌 남은 과제 ${left.length}개를 다 끝내면 스티커를 받아요${accOk?' (정확도 보너스 +1 확보!)':''}</div>`}
         ${rewardCardHTML(newCards)}
         ${left.length?`<p style="margin-top:12px">남은 과제 ${left.length}개: ${left.map(t=>t.title).join(', ')}</p><button class="bigbtn" onclick="startDaily('${left[0].id}')">▶ 다음 과제 ${left[0].title}</button>`:`<p style="margin-top:12px">오늘 과제 끝! 내일 또 만나 😊</p>`}
         <button class="bigbtn ghost" onclick="home()">🏠 홈으로</button></div>`;
@@ -127,7 +140,8 @@
       <h3 style="margin-bottom:6px">🎯 오늘의 과제 <span style="font-size:13px;color:var(--soft);font-weight:700;margin-left:auto">${done}/${n} ${streak?`· 🔥 ${streak}일 연속`:''}</span></h3>
       <div class="progress" style="height:12px;margin:0 0 6px"><div class="bar" style="width:${pct}%;background:${pct===100?'#19a974':'var(--c)'}"></div></div>
       ${rows}
-      ${D.allDone?'<div class="tipbox" style="margin-top:8px">🏆 오늘 과제 전부 완료! 보너스 +5 받았어요.</div>':''}
+      ${D.allDone?`<div class="tipbox" style="margin-top:8px">🏆 오늘 과제 완료! ${dailyRewardText(D)}<br><span style="font-size:12.5px;color:var(--soft)">지금부터 더 푸는 건 전부 보너스 스티커 ✨</span></div>`
+                 :`<div style="font-size:12.5px;color:var(--soft);margin-top:6px">🎟️ 스티커는 4개를 다 끝내면! 정확도 90%↑ 과제는 +1, 매일 이어서 하면 🔥 연속 보너스</div>`}
     </div>`;
   };
 

@@ -495,7 +495,15 @@ function logEvent(unitId,kind,n){ DB.log.unshift({t:Date.now(),u:unitId,k:kind,n
 /* ===================== 보상(스티커/경험치) ===================== */
 const CLEAR_REWARD=[10,8,6,4,2]; // 그 이후로는 1개씩 (반복 복습 방지 + 새로운 학습 장려)
 function rewardForClear(n){ return n<CLEAR_REWARD.length?CLEAR_REWARD[n]:1; }
-function addStickers(n){ if(n<=0)return; DB.stickers+=n; DB.stickersEver+=n; }
+/* 스티커 규칙(2026-09-22): 오늘의 과제를 전부 끝내야 문이 열린다. 그 뒤 추가로 푼 것(퀴즈 클리어·문제은행·복습·심화·발견)만 스티커.
+   과제 완료 보상 자체는 daily.js 가 force 로 준다. 반환값 = 실제로 받은 수(0이면 문 닫힘). */
+function dailyRewardsOpen(){ const d=(DB.daily||{})[todayKey()]; return !!(d&&d.allDone); }
+function addStickers(n, force){ if(n<=0)return 0; if(!force&&!dailyRewardsOpen()) return 0; DB.stickers+=n; DB.stickersEver+=n; return n; }
+function rewardLine(got, wanted, extra){ // 결과 화면 공용 문구
+  if(got>0) return `<div class="reward-banner">🎟️ 스티커 +${got}! <span style="font-size:13px;font-weight:700;color:var(--soft)">과제 끝낸 뒤 더 한 만큼 받는 보너스 ✨${extra?'<br>'+extra:''}</span></div>`;
+  if(wanted>0) return `<div class="tipbox" style="text-align:center">📌 스티커는 <b>오늘의 과제</b>를 다 끝낸 뒤에 받을 수 있어요. 과제 먼저, 그다음은 보너스!</div>`;
+  return '';
+}
 
 /* ===================== 아이돌 카드 (오리지널 캐릭터) ===================== */
 const GROUP='응원단 친구 카드 🎴';
@@ -635,7 +643,7 @@ function home(){
       <button onclick="renderGallery()">🎴 카드 모음</button>
     </div>
     <div class="credit" style="margin-top:6px"><span id="sync-dot">${syncLabel()}</span></div>
-    <div class="credit">새로운 단원을 처음 깨면 스티커가 듬뿍! 같은 걸 반복하면 조금씩 모여요.<br>스티커를 모으면 ${GROUP} 멤버 카드를 한 명씩 만날 수 있어요 💖</div>`;
+    <div class="credit">🎟️ 스티커는 <b>오늘의 과제를 다 끝내면</b> 받아요. 그 뒤에 더 풀면 보너스!<br>매일 이어서 하면 🔥 연속 보너스, 스티커를 모으면 ${GROUP} 카드가 열려요 💖</div>`;
 }
 
 function setGrade(n){ DB.grade=n; saveDB(); home(); }
@@ -872,7 +880,7 @@ function finishMaster(){
     logEvent(P.unitId,'clear',1);
     subText=ud.clears>=CLEAR_REWARD.length?'다음 클리어도 +1 (이제 새 단원에 도전!)':'다음 클리어는 +'+rewardForClear(ud.clears)+' — 너무 같은 것만 반복하지 말고 새 단원도!';
   }
-  addStickers(reward);
+  const got=addStickers(reward);
   const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   let stars,msg;
   if(P.retry===0){ stars='⭐⭐⭐'; msg='한 번도 안 틀렸어요! 완벽해요!'; }
@@ -886,7 +894,7 @@ function finishMaster(){
       <div class="msg">${msg}</div>
       ${INSIGHT[P.unitId]?`<div class="tipbox" style="text-align:left">💡 <b>오늘의 핵심:</b> ${INSIGHT[P.unitId]}</div>`:''}
       ${P.think&&TALK[P.unitId]?`<div class="tipbox" style="text-align:left;border-left-color:#54a0ff">💬 <b>아빠·엄마와 이야기해 봐!</b><br>${pick(TALK[P.unitId])}</div>`:''}
-      <div class="reward-banner">🎟️ 스티커 +${reward}!<br><span style="font-size:13px;font-weight:700;color:var(--soft)">${subText}</span></div>
+      ${rewardLine(got, reward, got>0?subText:'')}
       ${rewardCardHTML(newCards)}
       <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 다시 푼 문제 ${P.retry}개</span></div>
       <button class="bigbtn" onclick="setStage('bank')">🏦 문제은행에서 더 풀기</button>
@@ -896,7 +904,7 @@ function finishMaster(){
 }
 function finishBank(){
   const P=PLAY; P.cur=null; const correct=P.count-P.wrongCount;
-  const reward=Math.floor(correct/10); addStickers(reward);
+  const reward=Math.floor(correct/10), got=addStickers(reward);
   unitDB(P.unitId).bank+=P.count; if(P.count>0) logEvent(P.unitId,'bank',P.count);
   const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   const acc=P.count?Math.round(correct/P.count*100):0; const worst=worstCat(P.unitId);
@@ -906,7 +914,7 @@ function finishBank(){
       <div class="stars">🏦</div>
       <h2>문제은행 ${P.count}문제!</h2>
       <div class="msg">맞힌 문제 ${correct}개 · 정답률 ${acc}%</div>
-      ${reward>0?`<div class="reward-banner">🎟️ 스티커 +${reward}</div>`:''}
+      ${rewardLine(got, reward)}
       ${rewardCardHTML(newCards)}
       <div><span class="stat">⭐ ${P.score}점</span><span class="stat">🔁 틀린 문제 ${P.wrongCount}개</span></div>
       ${worst?`<p style="margin-top:12px">📘 가장 많이 틀린 유형: <b style="color:var(--c-dark)">${worst}</b></p>`:''}
@@ -917,7 +925,7 @@ function finishBank(){
 function finishReview(){
   const P=PLAY; P.cur=null;
   if(P.daily && typeof dailyOnFinish==='function' && dailyOnFinish(P)) return;
-  const reward=Math.floor(P.fixed/2); addStickers(reward);
+  const reward=Math.floor(P.fixed/2), got=addStickers(reward);
   unitDB(P.unitId).review+=P.fixed; if(P.fixed>0) logEvent(P.unitId,'review',P.fixed);
   const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   confetti(true); sfx('win');
@@ -926,7 +934,7 @@ function finishReview(){
       <div class="stars">📘✨</div>
       <h2>복습 완료!</h2>
       <div class="msg">${P.fixed}문제를 다시 맞혔어요.<br>틀렸던 게 실력이 되는 순간이에요!</div>
-      ${reward>0?`<div class="reward-banner">🎟️ 스티커 +${reward}</div>`:''}
+      ${rewardLine(got, reward)}
       ${rewardCardHTML(newCards)}
       <button class="bigbtn" onclick="setStage('review')">📊 분석 다시 보기</button>
       <button class="bigbtn ghost" onclick="setStage('bank')">🏦 문제은행 더 풀기</button>
@@ -2514,7 +2522,7 @@ function dcNext(){
   if(D.i<D.steps.length){ dcDraw(); return; }
   const ud=unitDB(D.unitId);
   let bonus=0;
-  if(!ud.discoverDone){ ud.discoverDone=1; bonus=2; addStickers(2); logEvent(D.unitId,'discover',1); }
+  if(!ud.discoverDone){ ud.discoverDone=1; bonus=addStickers(2); logEvent(D.unitId,'discover',1); }
   const newCards=checkCardUnlocks(); saveDB();
   confetti(true); sfx('win');
   D.body.innerHTML=`<div class="result card">
