@@ -627,6 +627,7 @@ function home(){
       <span class="wpill">📚 ${DB.totalSolved}문제</span>
       <button class="wpill" onclick="toggleMute()" title="효과음 켜기/끄기">${DB.muted?'🔇':'🔊'}</button>
     </div>
+    ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
     ${sections||`<div class="credit" style="margin:34px 0;font-size:16px">📚 <b>${g}학년</b> 내용은 곧 추가될 거예요!<br>지금은 위에서 <b>3학년</b>을 골라 즐겨 보세요 😊</div>`}
     <button class="askbtn" onclick="openChat(null)">💬 선생님한테 물어보기</button>
     <div class="home-btns">
@@ -794,7 +795,7 @@ function submit(){
   const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
-  markStat(P.unitId,c.cat,ok);
+  markStat(c.unitId||P.unitId,c.cat,ok); // 과제(여러 단원 섞임)는 문제의 단원으로 기록
   const ansEl=$('#ans');
   if(c.choices){ c.choices.forEach((_,i)=>{ const b=$('#ch'+i); if(!b)return; b.disabled=true;
     if(i===c.a) b.classList.add('correct'); else if(i===val&&!ok) b.classList.add('wrongpick'); }); }
@@ -852,7 +853,9 @@ function rewardCardHTML(newCards){
   }).join('');
 }
 function finishMaster(){
-  const P=PLAY; P.cur=null; const ud=unitDB(P.unitId);
+  const P=PLAY; P.cur=null;
+  if(typeof dailyOnFinish==='function' && dailyOnFinish(P)) return; // 오늘의 과제 세트면 과제 결과 화면
+  const ud=unitDB(P.unitId);
   let reward, subText;
   if(P.think){
     ud.thinkClears=(ud.thinkClears||0)+1;
@@ -912,7 +915,9 @@ function finishBank(){
     </div>`;
 }
 function finishReview(){
-  const P=PLAY; P.cur=null; const reward=Math.floor(P.fixed/2); addStickers(reward);
+  const P=PLAY; P.cur=null;
+  if(P.daily && typeof dailyOnFinish==='function' && dailyOnFinish(P)) return;
+  const reward=Math.floor(P.fixed/2); addStickers(reward);
   unitDB(P.unitId).review+=P.fixed; if(P.fixed>0) logEvent(P.unitId,'review',P.fixed);
   const newCards=checkCardUnlocks(); saveDB(); syncSoon();
   confetti(true); sfx('win');
@@ -957,7 +962,7 @@ function renderReview(body,unitId){
 /* ===================== 부모용 대시보드 ===================== */
 function fmtTime(s){ const m=Math.floor(s/60), h=Math.floor(m/60); return h>0?`${h}시간 ${m%60}분`:`${m}분`; }
 function fmtAgo(t){ const d=Date.now()-t, mi=Math.floor(d/60000); if(mi<1)return '방금'; if(mi<60)return mi+'분 전'; const h=Math.floor(mi/60); if(h<24)return h+'시간 전'; return Math.floor(h/24)+'일 전'; }
-const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습', deep:'🚀 심화 클리어', think:'🧠 생각 클리어', discover:'🔍 개념 발견'};
+const KIND={clear:'🏆 퀴즈 클리어', bank:'🏦 문제은행', review:'📘 복습', deep:'🚀 심화 클리어', think:'🧠 생각 클리어', discover:'🔍 개념 발견', daily:'🎯 오늘의 과제'};
 function renderDashboard(){
   stopStudyClock(); setTheme(null);
   const acc=DB.totalSolved?Math.round(DB.totalCorrect/DB.totalSolved*100):0;
@@ -982,6 +987,7 @@ function renderDashboard(){
         <div class="dash-stat"><div class="v">🏆 ${UNITS.reduce((s,u)=>s+unitDB(u.id).clears,0)}</div><div class="k">단원 클리어</div></div>
       </div>
     </div>
+    ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
     <div class="card"><h3>📅 최근 7일, 매일 얼마나 풀었나</h3>${weekChart()}</div>
     <div class="card"><h3>📚 단원별 공부량</h3>${unitRows}</div>
     <div class="card"><h3>🔎 더 연습이 필요한 유형</h3><div style="display:flex;flex-wrap:wrap">${weak}</div></div>
@@ -3311,6 +3317,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <!-- 학년별 콘텐츠 (추가되는 학년마다 여기에 등록). 엔진 정의 후 로드되어 UNITS/MODULES 등에 등록됨 -->
 <script src="grades/g1.js"></script>
 <script src="grades/g3-time.js"></script>
+<script src="daily.js"></script>
 <script>
 home();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
