@@ -17,6 +17,7 @@
   function weakScores(){
     const s={}; // key unit|cat → score
     mathUnits().forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) s[u.id+'|'+c]=(s[u.id+'|'+c]||0)+cats[c].wrong; } });
+    ((DB.plan&&DB.plan.focus)||[]).forEach(k=>{ s[k]=(s[k]||0)+4; }); // 선생님 리포트의 다음 주 집중 유형
     (DB.miss||[]).slice(0,60).forEach(m=>{ if(m.u&&m.cat&&mathUnits().some(u=>u.id===m.u)) s[m.u+'|'+m.cat]=(s[m.u+'|'+m.cat]||0)+1.5; });
     return Object.entries(s).map(([k,v])=>{ const [unit,cat]=k.split('|'); return {unit,cat,score:v}; }).sort((a,b)=>b.score-a.score);
   }
@@ -42,6 +43,7 @@
       return (A.clears-B.clears)||(accA-accB)||(Math.random()-0.5); });
     return cands[0]||mathUnits()[0];
   }
+  function needTalk(){ const iv=(DB.interviews||[]).slice(-1)[0]; return !iv||Date.now()-iv.t>36*3600*1000; }
   window.ensureDaily=function(){
     if(DB.viewer) return todayTask();
     DB.daily=DB.daily||{}; if(DB.daily[dkey()]) return DB.daily[dkey()];
@@ -49,6 +51,7 @@
     const tasks=[
       {id:'weak',  title:'🎯 약점 훈련',        sub:`가장 많이 틀린 유형 ${WEAK_N()}문제`, n:WEAK_N(),  done:false, correct:0, total:0},
       {id:'time',  title:'🕰️ 시계 집중',        sub:`시각과 시간 ${TIME_N()}문제`,          n:TIME_N(),  done:false, correct:0, total:0, unit:'time'},
+      ...(needTalk()?[{id:'talk', title:'🎤 선생님과 이야기', sub:'말로 답하는 3분 인터뷰', n:0, done:false, correct:0, total:0}]:[]),
       {id:'expr',  title:'✍️ 식 세우기',        sub:`상황을 식으로 ${EXPR_N()}문제 + 다른 방법으로`, n:EXPR_N(), done:false, correct:0, total:0},
       {id:'unit',  title:`📘 오늘의 단원 · ${u.name}`, sub:L().deep?'퀴즈 + 심화 클리어':'퀴즈 한 세트 클리어', n:0, done:false, correct:0, total:0, unit:u.id, deep:L().deep, quizDone:false},
       {id:'review',title:'🔁 틀린 문제 다시',   sub:wrongPool.length?`최근 오답 ${Math.min(REVIEW_N(),wrongPool.length)}개`:'틀린 문제가 없어요 — 자동 완료!', n:Math.min(REVIEW_N(),wrongPool.length), done:wrongPool.length===0, correct:0, total:0},
@@ -79,6 +82,7 @@
     const D=ensureDaily(); if(!D) return; const task=D.tasks.find(t=>t.id===id); if(!task) return;
     if(DB.viewer){ alert('함께 보기 모드에서는 아이 기록만 볼 수 있어요.'); return; }
     if(id==='unit'){ openUnit(task.unit); setStage(task.deep&&task.quizDone?'deep':'quiz'); return; }
+    if(id==='talk'){ const body=dailyScreen(task.title); startInterview({body, onDone:n=>dailyTaskDone(task,0,0,body,`선생님이 확인한 개념 ${n}개`)}); return; }
     if(id==='expr'){
       const body=dailyScreen(task.title);
       startExprSet(buildExprSet(EXPR_N()),{body, stop:()=>home(), onDone:(ft,total)=>{ dailyTaskDone(task, ft, total, body, `다른 방법 성공 ${EX_METHOD()}`); }});
@@ -146,7 +150,7 @@
       body.innerHTML=`<div class="result card">
         <div class="stars">${all?'🏆🎉':'✅'}</div>
         <h2>${task.title} 완료!</h2>
-        <div class="msg">${total}문제 중 처음에 바로 맞힌 문제 <b>${firstTry}개</b>${extra?` · ${extra}`:''}${accOk?' · 🎯 정확도 90% 이상!':''}</div>
+        <div class="msg">${total?`${total}문제 중 처음에 바로 맞힌 문제 <b>${firstTry}개</b>${extra?` · ${extra}`:''}`:(extra||'잘했어!')}${accOk?' · 🎯 정확도 90% 이상!':''}</div>
         ${all?`<div class="reward-banner">${dailyRewardText(D)}</div><div class="tipbox" style="text-align:center">✨ 이제부터 더 푸는 건 전부 <b>보너스 스티커</b>! 문제은행·심화·다른 단원 도전해 봐.</div>`
              :`<div class="tipbox" style="text-align:center">📌 남은 과제 ${left.length}개를 다 끝내면 스티커를 받아요${accOk?' (정확도 보너스 +1 확보!)':''}</div>`}
         ${rewardCardHTML(newCards)}

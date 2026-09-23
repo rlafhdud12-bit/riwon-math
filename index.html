@@ -345,7 +345,9 @@ async function syncNow(){
   if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
-    const db=Object.assign({},DB); delete db.fam; delete db.cheer; // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
+    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
+    db.hw={done:(DB.hw&&DB.hw.done)||{}}; // 숙제 문제 본문(시계 그림 등)은 크니 결과만
+    db.catalog=UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]).map(u=>({id:u.id,name:u.name,cats:(MODULES[u.id].gens||[]).map(g=>g.cat)})); // 리포트 분석용 유형 목록
     const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
     if(r.ok){ DB.lastSync=Date.now(); saveDB(); const d=document.getElementById('sync-dot'); if(d) d.textContent='☁️ 방금 저장됨'; }
   }catch(e){}
@@ -423,7 +425,7 @@ function renderChat(){
     <div class="chat-top"><button class="back" onclick="closeChat()">←</button><div class="t">🙋 선생님한테 물어보기</div><span class="sync-dot" id="chat-left"></span></div>
     <div class="chat-log" id="chat-log">${ctx&&ctx.q?`<div class="msg sys">📌 ${ctx.q.replace(/<[^>]+>/g,'')}${ctx.given!==undefined?` · 내 답: ${ctx.given}`:''}</div>`:''}</div>
     <div class="chips">${chips.map(c=>`<button onclick="sendChat(${JSON.stringify(c)})">${c}</button>`).join('')}</div>
-    <div class="chat-in"><input id="chat-input" placeholder="선생님한테 말해 봐…" maxlength="300" onkeydown="if(event.key==='Enter'){sendChat()}"><button id="chat-send" onclick="sendChat()">보내기</button></div>`;
+    <div class="chat-in"><button id="chat-mic" onclick="chatMic()" style="background:#fff;color:var(--c-dark);border:2px solid #eee;padding:0 12px">🎤</button><input id="chat-input" placeholder="선생님한테 말해 봐…" maxlength="300" onkeydown="if(event.key==='Enter'){sendChat()}"><button id="chat-send" onclick="sendChat()">보내기</button></div>`;
   CHAT.msgs.forEach(m=>appendBubble(m.role==='user'?'me':'t',m.content));
 }
 function appendBubble(kind,text){
@@ -485,7 +487,7 @@ async function pullNow(force){
     const r=await fetch(TUTOR_API+'/api/record?id='+encodeURIComponent(DB.lid)); if(!r.ok){ pullBusy=false; return false; }
     const j=await r.json(); if(!j.db){ pullBusy=false; return false; }
     // 부모 폰 자체 설정(PIN·잠금·소리·가족카드·학년)은 유지하고, 학습 기록만 아이 것으로 바꾼다
-    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, name:DB.name||j.db.name, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
+    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, reports:DB.reports, reportSeen:DB.reportSeen, reportSub:DB.reportSub, reportJob:DB.reportJob, hwJobs:DB.hwJobs, name:DB.name||j.db.name, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
     DB=Object.assign(j.db,keep); saveDB(); lastPull=Date.now(); pullBusy=false; return true;
   }catch(e){ pullBusy=false; return false; }
 }
@@ -3245,11 +3247,12 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="grades/g3-time.js"></script>
 <script src="daily.js"></script>
 <script src="expr.js"></script>
+<script src="coach.js"></script>
 <script src="ui.js"></script>
 <script>
 home();
-if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
-else { fetchCheer(true); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
+if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
+else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
 </script>
 </body>
 </html>

@@ -88,6 +88,7 @@
       <div class="hbar"><div class="htitle">${appTitle()} <span class="dim">· 부모</span></div>
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
+      ${typeof parentReportHTML==='function'?parentReportHTML():''}
       ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       <div class="row3"><button class="pri" style="background:#e056a0;border-color:#e056a0" onclick="renderGallery()">💌 응원 카드 보내기</button><button onclick="openChat(null)">💬 선생님에게 묻기</button></div>
