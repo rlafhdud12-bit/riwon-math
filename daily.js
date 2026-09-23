@@ -17,7 +17,7 @@
   function weakScores(){
     const s={}; // key unit|cat → score
     mathUnits().forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) s[u.id+'|'+c]=(s[u.id+'|'+c]||0)+cats[c].wrong; } });
-    ((DB.plan&&DB.plan.focus)||[]).forEach(k=>{ s[k]=(s[k]||0)+4; }); // 선생님 리포트의 다음 주 집중 유형
+    ((DB.plan&&DB.plan.focus)||[]).forEach(k=>{ if(mathUnits().some(u=>u.id===k.split('|')[0])) s[k]=(s[k]||0)+4; }); // 선생님 리포트의 다음 주 집중 유형(3학년 수학만)
     (DB.miss||[]).slice(0,60).forEach(m=>{ if(m.u&&m.cat&&mathUnits().some(u=>u.id===m.u)) s[m.u+'|'+m.cat]=(s[m.u+'|'+m.cat]||0)+1.5; });
     return Object.entries(s).map(([k,v])=>{ const [unit,cat]=k.split('|'); return {unit,cat,score:v}; }).sort((a,b)=>b.score-a.score);
   }
