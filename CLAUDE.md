@@ -30,7 +30,7 @@
 
 ## 검증 (필수, push 전)
 `node _check.cjs` — 엔진·g1 문법 + **개인정보 잔존 검사(리원/도율/photos/누나 = 0이어야 함)**. 이 파일은 저장소에 둔다.
-+ 생성기 스모크(모든 gens 수십 회: choices 4·중복 없음·a 유효). sw.js CACHE는 정적 파일 추가/수정 시 올린다(현 v10).
++ 생성기 스모크(모든 gens 수십 회: choices 4·중복 없음·a 유효). sw.js는 HTML·.js·manifest 모두 **네트워크 우선**(v18~)이라 배포 뒤 새로고침 한 번이면 새 코드. CACHE 버전은 새 정적 파일(아이콘 등) 추가 시만 올리고 ASSETS에 등록.
 
 ## 클로드가 기록을 읽는 법 (전담 과외 루프)
 `cd chodeung-tutor-api; netlify blobs:get learning <id>/latest` (id는 앱 부모화면/백업 JSON의 `lid`). 오답 로그 `db.miss`로 원인 분석 → 주간 진단 메모는 `AI컨텍스트\90_개인\산출물\`에 파일로. 이름·사진 없음.
