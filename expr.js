@@ -245,17 +245,99 @@
   window.fetchHomework=async function(force){
     if(!navigator.onLine||(!force&&Date.now()-hwLast<5*60000)) return false;
     try{ const r=await fetch((window.HW_API||TUTOR_API)+'/api/homework?id='+encodeURIComponent(learnerId())); if(!r.ok) return false; const j=await r.json(); if(!Array.isArray(j.sets)) return false;
-      hwLast=Date.now(); DB.hw=DB.hw||{done:{}}; DB.hw.sets=j.sets.map(s=>({jobId:s.jobId,t:s.t,title:s.title,note:s.note,source:s.source,problems:s.problems})); saveDB(); return true; }catch(e){ return false; }
+      hwLast=Date.now(); DB.hw=DB.hw||{done:{}}; DB.hw.sets=j.sets.map(s=>({jobId:s.jobId,t:s.t,title:s.title,note:s.note,source:s.source,problems:s.problems,quest:s.quest||null})); DB.hw.seen=DB.hw.seen||[];
+      // 새 퀘스트 도착 알림(아이 폰)
+      const fresh=DB.hw.sets.filter(s=>s.quest&&!DB.hw.done[s.jobId]&&!DB.hw.seen.includes(s.jobId));
+      if(fresh.length&&!DB.viewer){ const s=fresh[0]; idolPopup(`🎁 ${s.quest.from}의 숙제 보너스가 도착했어! 다 맞히면 "${s.quest.reward}"`, true); }
+      fresh.forEach(s=>DB.hw.seen.push(s.jobId));
+      saveDB(); return true; }catch(e){ return false; }
   };
-  window.hwPendingSets=function(){ const H=DB.hw||{done:{},sets:[]}; return (H.sets||[]).filter(s=>!(H.done||{})[s.jobId]); };
+  window.hwPendingSets=function(){ const H=DB.hw||{done:{},sets:[]}; return (H.sets||[]).filter(s=>!(H.done||{})[s.jobId]&&!s.quest); };
+  window.questPending=function(){ const H=DB.hw||{done:{},sets:[]}; return (H.sets||[]).filter(s=>s.quest&&!(H.done||{})[s.jobId]); };
   window.startHomework=function(jobId, opt){
     const s=(DB.hw&&DB.hw.sets||[]).find(x=>x.jobId===jobId); if(!s) return;
-    const set=s.problems.map((p,i)=>{ const base={id:i, unitId:'hw', cat:p.tag||'숙제', q:p.q, hint:p.hint+(p.explain?`<br><span style="font-weight:700">${p.explain}</span>`:''), hw:jobId};
+    const set=s.problems.map((p,i)=>{ const base={id:i, unitId:'hw', cat:p.tag||'숙제', q:p.q, visual:p.visual||null, hint:p.hint+(p.explain?`<br><span style="font-weight:700">${p.explain}</span>`:''), hw:jobId};
       if(p.type==='choice'){ const choices=shuffle(p.choices.slice()); return Object.assign(base,{choices, a:choices.indexOf(p.answer)}); } return Object.assign(base,{a:parseInt(p.answer,10)}); });
     const body=opt&&opt.body; if(!body) return;
     PLAY={mode:'master',unitId:'hw',body,daily:opt.daily||('hw:'+jobId),hw:jobId,queue:shuffle(set),total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false,wrongQs:[]};
     advance();
   };
+  /* ---------- 🎁 부모가 유형을 골라 내는 보너스 퀘스트 ---------- */
+  window.questCatalog=function(){ // 3학년 수학 전 유형(퀴즈 생성기) 목록
+    return UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]&&MODULES[u.id].gens).map(u=>({unit:u, cats:MODULES[u.id].gens.map(g=>g.cat)}));
+  };
+  window.renderQuestMaker=function(){
+    window._qm=window._qm||{sel:{}, n:10, from:'아빠', stickers:5, reward:''};
+    const Q=window._qm;
+    const groups=questCatalog().map(g=>`<div class="subj-head" style="margin-top:12px"><span>${g.unit.emoji} ${g.unit.name}</span><span class="line"></span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${g.cats.map(c=>{ const k=g.unit.id+'|'+c; const on=!!Q.sel[k]; return `<button class="wpill" style="${on?'border-color:var(--c);color:var(--c-dark)':'opacity:.6'}" onclick="window._qm.sel['${k}']=!window._qm.sel['${k}'];renderQuestMaker()">${on?'✅':'⬜'} ${c}</button>`; }).join('')}</div>`).join('');
+    const nSel=Object.values(Q.sel).filter(Boolean).length;
+    app.innerHTML=`
+      <div class="topbar"><button class="back" onclick="home()">←</button><div class="t">🎁 ${Q.from}의 숙제 만들기</div></div>
+      <div class="card">
+        <div class="setrow"><div class="k">보내는 사람</div><div style="display:flex;gap:6px">${['아빠','엄마'].map(f=>`<button class="wpill" style="${Q.from===f?'border-color:var(--c);color:var(--c-dark)':'opacity:.6'}" onclick="window._qm.from='${f}';renderQuestMaker()">${f}</button>`).join('')}</div></div>
+        <div class="setrow"><div class="k">문제 수</div><div style="display:flex;gap:6px">${[6,10,15].map(n=>`<button class="wpill" style="${Q.n===n?'border-color:var(--c);color:var(--c-dark)':'opacity:.6'}" onclick="window._qm.n=${n};renderQuestMaker()">${n}</button>`).join('')}</div></div>
+        <div class="setrow"><div class="k">보너스 스티커</div><div style="display:flex;gap:6px">${[3,5,10].map(n=>`<button class="wpill" style="${Q.stickers===n?'border-color:var(--c);color:var(--c-dark)':'opacity:.6'}" onclick="window._qm.stickers=${n};renderQuestMaker()">+${n}</button>`).join('')}</div></div>
+        <div style="margin-top:10px"><div class="k" style="font-weight:800;font-size:14.5px;margin-bottom:6px">🎁 특별 보상 (다 맞히면)</div><input id="qm-reward" value="${Q.reward.replace(/"/g,'&quot;')}" placeholder="예: 🍦 아이스크림 / 30분 더 놀기 / 주말 놀이공원" maxlength="60" style="width:100%;box-sizing:border-box;border:2px solid #eee;border-radius:14px;padding:12px;font-size:15px;font-weight:700" oninput="window._qm.reward=this.value"></div>
+      </div>
+      <div class="card"><h3>문제 유형 고르기 <span class="dim">${nSel}개 선택</span></h3><p class="dim">고른 유형을 골고루 섞어 ${Q.n}문제를 만들어요.</p>${groups}</div>
+      <button class="bigbtn" style="background:#8e44ad" onclick="sendQuest()">🎁 보내기</button>
+      <div class="credit">리원이 폰에 "숙제 보너스가 도착했어요" 팝업과 퀘스트 카드가 떠요. 매일 과제와는 별개의 보너스예요.</div>`;
+  };
+  window.sendQuest=async function(){
+    const Q=window._qm; const keys=Object.keys(Q.sel).filter(k=>Q.sel[k]); if(!keys.length){ alert('문제 유형을 하나 이상 골라 주세요.'); return; }
+    const reward=(Q.reward||'').trim(); if(!reward){ alert('특별 보상을 적어 주세요. (예: 🍦 아이스크림)'); return; }
+    const gens=keys.map(k=>{ const [u,c]=k.split('|'); const g=MODULES[u]&&MODULES[u].gens.find(x=>x.cat===c); return g?{u,g}:null; }).filter(Boolean);
+    const problems=[]; for(let i=0;i<Q.n;i++){ const {u,g}=gens[i%gens.length]; const o=genOne(u,g); const un=UNITS.find(x=>x.id===u);
+      problems.push(o.choices?{q:o.q,type:'choice',answer:o.choices[o.a],choices:o.choices,hint:o.hint,explain:'',tag:(un?un.name+'·':'')+g.cat,visual:o.visual||''}:{q:o.q,type:'number',answer:String(o.a),choices:[],hint:o.hint,explain:'',tag:(un?un.name+'·':'')+g.cat,visual:o.visual||''}); }
+    const jobId='q'+Array.from(crypto.getRandomValues(new Uint8Array(5))).map(b=>(b%36).toString(36)).join('')+Date.now().toString(36).slice(-4);
+    const set={title:`${Q.from}의 숙제`, problems:shuffle(problems), quest:{from:Q.from, reward, stickers:Q.stickers, msg:''}};
+    try{ const r=await fetch((window.HW_API||TUTOR_API)+'/api/homework',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),action:'add',jobId,set})}); const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.sets){ alert('보내기 실패: '+(j.error||r.status)); return; }
+      DB.hw=DB.hw||{done:{}}; DB.hw.sets=j.sets.map(s=>({jobId:s.jobId,t:s.t,title:s.title,note:s.note,source:s.source,problems:s.problems,quest:s.quest||null})); saveDB();
+      window._qm.sel={}; window._qm.reward=''; alert(`보냈어요! 아이 폰에 "${Q.from}의 숙제 보너스" 퀘스트가 떠요 🎁`); home();
+    }catch(e){ alert('인터넷 연결을 확인해 주세요.'); }
+  };
+  // 아이 홈 카드
+  window.questCardHTML=function(){
+    const qs=questPending(); if(!qs.length) return '';
+    return qs.map(s=>`<div class="card" style="border:2px solid #d9b3ff;background:linear-gradient(135deg,#fff,#f8f0ff)">
+      <h3 style="color:#8e44ad">🎁 ${s.quest.from}의 숙제 보너스가 도착했어요!</h3>
+      <p style="margin:0 0 8px;font-size:14.5px">이 <b>${s.problems.length}문제</b>를 다 맞히면 특별 보상 → <b style="color:#8e44ad">${s.quest.reward}</b>${s.quest.stickers?` <span class="dim">+ 🎟️ ${s.quest.stickers}</span>`:''}</p>
+      <div class="dim" style="margin-bottom:8px">${[...new Set(s.problems.map(p=>p.tag))].slice(0,4).join(' · ')}</div>
+      ${DB.viewer?'':`<button class="bigbtn" style="background:#8e44ad;margin-top:4px" onclick="startQuest('${s.jobId}')">🚀 도전!</button>`}
+    </div>`).join('');
+  };
+  window.startQuest=function(jobId){
+    const s=questPending().find(x=>x.jobId===jobId); if(!s) return;
+    clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); curUnit=null;
+    app.innerHTML=`<div class="topbar"><button class="back" onclick="home()">←</button><div class="t">🎁 ${s.quest.from}의 숙제</div><div class="spacer"></div><span class="mini">🎁 ${s.quest.reward}</span></div><div id="stage-body"></div>`;
+    startStudyClock(); startHomework(jobId,{body:$('#stage-body'), daily:'quest:'+jobId});
+  };
+  // 퀘스트 완료(daily.js 의 dailyOnFinish 가 과제를 못 찾으면 여기로)
+  window.questOnFinish=function(P){
+    const jobId=P.hw; const s=(DB.hw&&DB.hw.sets||[]).find(x=>x.jobId===jobId); if(!s||!s.quest) return false;
+    const total=P.total, firstTry=Math.max(0,P.solved.size-P.retry);
+    DB.hw.done=DB.hw.done||{}; DB.hw.done[jobId]={t:Date.now(),correct:firstTry,total,wrongQs:(P.wrongQs||[]).slice(0,8),quest:true};
+    const got=addStickers(s.quest.stickers||0,true); const newCards=checkCardUnlocks(); logEvent('hw','daily',1); saveDB(); syncSoon();
+    confetti(true); sfx('win'); idolPopup(`퀘스트 성공! ${s.quest.from}에게 보여 줘 🎁`, true);
+    P.body.innerHTML=`<div class="result card" style="border:2px solid #d9b3ff">
+      <div class="stars">🏆🎁</div>
+      <h2>퀘스트 성공!</h2>
+      <div class="msg">${total}문제 중 한 번에 맞힌 문제 <b>${firstTry}개</b>${P.retry?` · 다시 풀어 맞힌 ${P.retry}개`:''}</div>
+      <div class="reward-banner" style="font-size:18px">🎁 특별 보상: <b>${s.quest.reward}</b><br><span style="font-size:13px;font-weight:700;color:var(--soft)">${s.quest.from}에게 이 화면을 보여 줘!</span></div>
+      ${got?`<div class="reward-banner">🎟️ 보너스 스티커 +${got}</div>`:''}
+      ${rewardCardHTML(newCards)}
+      <button class="bigbtn" onclick="home()">🏠 홈으로</button></div>`;
+    return true;
+  };
+  // 부모 화면 카드
+  window.parentQuestHTML=function(){
+    const sets=((DB.hw&&DB.hw.sets)||[]).filter(s=>s.quest), done=(DB.hw&&DB.hw.done)||{};
+    const rows=sets.slice(0,6).map(s=>{ const d=done[s.jobId]; return `<div class="hwrow"><div class="lab"><span>🎁 ${s.quest.from}의 숙제 <span class="dim">${s.problems.length}문제 · ${s.quest.reward} · ${fmtAgo(s.t)}</span></span><span>${d?`🏆 ${d.correct}/${d.total}`:'⬜ 아직'}</span></div>${d&&d.wrongQs&&d.wrongQs.length?`<div class="dim" style="color:#e8503a">틀렸던 것: ${d.wrongQs.slice(0,3).join(' / ')}</div>`:''}<button class="linkbtn" onclick="removeHomework('${s.jobId}')">삭제</button></div>`; }).join('');
+    return `<div class="card"><h3 style="color:#8e44ad">🎁 아빠·엄마의 숙제 (보너스 퀘스트)</h3><p class="dim">유형을 골라 보내면 아이 폰에 퀘스트로 떠요. 다 맞히면 적어 둔 특별 보상!</p><button class="bigbtn" style="background:#8e44ad;margin-top:4px" onclick="renderQuestMaker()">🎁 퀘스트 만들기</button>${rows?`<div style="margin-top:8px">${rows}</div>`:''}</div>`;
+  };
+
   // 부모 폰: 사진 → 숙제 생성
   window.createHomeworkFromPhotos=function(input){
     const files=[...(input.files||[])].slice(0,3); if(!files.length) return;
@@ -286,7 +368,7 @@
   };
   window.removeHomework=async function(jobId){ if(!confirm('이 숙제 세트를 지울까요?')) return; try{ const r=await fetch(TUTOR_API+'/api/homework',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),action:'remove',jobId})}); const j=await r.json(); if(j.sets){ DB.hw=DB.hw||{done:{}}; DB.hw.sets=j.sets; } DB.hwJobs=(DB.hwJobs||[]).filter(x=>x.jobId!==jobId); saveDB(); }catch(e){} renderDashboard(); };
   window.parentHomeworkHTML=function(){
-    const sets=(DB.hw&&DB.hw.sets)||[], done=(DB.hw&&DB.hw.done)||{}, jobs=DB.hwJobs||[];
+    const sets=((DB.hw&&DB.hw.sets)||[]).filter(s=>!s.quest), done=(DB.hw&&DB.hw.done)||{}, jobs=DB.hwJobs||[];
     const live=jobs.filter(j=>j.status==='sending'||j.status==='pending').map(j=>`<div class="logrow"><span>${j.status==='sending'?'📤 보내는 중…':'⏳ 선생님이 문제를 만드는 중… (1~2분)'}</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
     const errs=jobs.filter(j=>j.status==='error').slice(0,2).map(j=>`<div class="logrow"><span style="color:#e8503a">⚠️ ${j.error||'오류'}</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
     const rows=sets.map(s=>{ const d=done[s.jobId]; return `<div class="hwrow">

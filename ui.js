@@ -23,6 +23,7 @@
       <div class="hbar"><div class="htitle">${appTitle()} ✨</div>
         <div class="hright"><span class="hpill">🎟️ ${DB.stickers}</span>${streak?`<span class="hpill">🔥 ${streak}일</span>`:''}<button class="hpill" onclick="toggleMute()">${DB.muted?'🔇':'🔊'}</button></div></div>
       ${gradeBar}
+      ${typeof questCardHTML==='function'?questCardHTML():''}
       ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
       <div class="row3"><button class="pri" onclick="openChat(null)">💬 선생님</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
       ${math.length?head('🧮','수학')+grid(math):''}
@@ -87,6 +88,7 @@
       <div class="hbar"><div class="htitle">${appTitle()} <span class="dim">· 부모</span></div>
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
+      ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       <div class="row3"><button class="pri" style="background:#e056a0;border-color:#e056a0" onclick="renderGallery()">💌 응원 카드 보내기</button><button onclick="openChat(null)">💬 선생님에게 묻기</button></div>
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}

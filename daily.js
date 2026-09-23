@@ -121,9 +121,11 @@
   // 반환값 true = 과제 화면을 직접 그렸으니 엔진은 기본 결과 화면을 그리지 말 것
   window.EX_METHOD=function(){ try{ const e=typeof exState==='function'?exState():null; return e?`${e.methodOk}/${e.methodTotal}`:''; }catch(err){ return ''; } };
   window.dailyOnFinish=function(P){
+    if(P.daily&&String(P.daily).startsWith('quest:')&&typeof questOnFinish==='function') return questOnFinish(P);
     const D=todayTask(); if(!D) return false;
     if(P.daily){
-      const task=D.tasks.find(t=>t.id===P.daily); if(!task) return false;
+      const task=D.tasks.find(t=>t.id===P.daily);
+      if(!task){ return (P.hw&&typeof questOnFinish==='function')?questOnFinish(P):false; } // 🎁 퀘스트
       const total=P.mode==='review'?P.startN:P.total;
       const firstTry=P.mode==='review'?P.fixed:P.solved.size-P.retry; // 첫 시도에 맞힌 수(재도전 외)
       if(P.hw){ DB.hw=DB.hw||{done:{}}; DB.hw.done=DB.hw.done||{}; DB.hw.done[P.hw]={t:Date.now(),correct:Math.max(0,firstTry),total,wrongQs:(P.wrongQs||[]).slice(0,8)}; }
