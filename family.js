@@ -17,6 +17,7 @@
   .msg .tm{display:block;font-size:10.5px;opacity:.6;margin-top:3px;text-align:right}
   .pace-box{background:#fff6e0;border:2px solid #ffd27a;border-radius:16px;padding:12px;font-weight:900;color:#8a5a00;font-size:16px}
   .pace-row{display:flex;gap:8px;margin-top:10px}
+  .choice-btn.pace-pick{outline:4px solid #ffd27a;outline-offset:2px}
   .pace-row button{flex:1;border-radius:12px;padding:11px;font-weight:900;font-size:15px}
   .pace-row button:first-child{background:#fff;border:2px solid #ffd27a;color:#8a5a00}
   .pace-row button:last-child{background:var(--c);color:#fff}
@@ -25,6 +26,9 @@
   `; document.head.appendChild(st);
   const role=()=>DB.viewer?'parent':'child';
   const lid=()=>DB.viewer?DB.lid:learnerId();
+  // 부모 폰이 여러 대(엄마·아빠)일 수 있어 기기마다 익명 표시를 둔다 → '내가 보낸 말'을 기기로 가림
+  const devId=()=>{ if(!DB.devId){ DB.devId=Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b=>(b%36).toString(36)).join(''); saveDB(); } return DB.devId; };
+  const isMine=m=>m.from===role()&&(!DB.viewer||!m.dev||m.dev===devId());
   const hhmm=t=>{ const d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
 
   /* ================= 👨‍👧 가족 채팅 ================= */
@@ -35,10 +39,13 @@
     if(!navigator.onLine) return false;
     try{ const j=await (await fetch(API()+'/api/family?id='+encodeURIComponent(lid())+'&since='+(DB.famRead||0))).json();
       learnLabel(j.msgs);
-      const n=(j.msgs||[]).filter(m=>m.from!==role()).length; const changed=n!==(DB.famUnread||0); DB.famUnread=n; saveDB(); return changed; }catch(e){ return false; }
+      const n=(j.msgs||[]).filter(m=>!isMine(m)).length; const changed=n!==(DB.famUnread||0); DB.famUnread=n; saveDB(); return changed; }catch(e){ return false; }
   };
   // 아이 폰은 부모가 고른 호칭(아빠/엄마)을 모른다 → 부모가 보낸 마지막 메시지의 이름으로 배운다
-  function learnLabel(msgs){ if(DB.viewer) return; const p=(msgs||[]).filter(m=>m.from==='parent'&&m.name).pop(); if(p&&p.name!==DB.parentLabel){ DB.parentLabel=p.name; saveDB(); } }
+  //   엄마·아빠 둘 다 보내면 "엄마·아빠"
+  function learnLabel(msgs){ if(DB.viewer) return; const names=new Set(DB.parentNames||[]); (msgs||[]).forEach(m=>{ if(m.from==='parent'&&m.name) names.add(m.name); });
+    const list=[...names].sort((a,b)=>a==='엄마'?-1:b==='엄마'?1:0).slice(0,3), label=list.join('·');
+    if(label&&label!==DB.parentLabel){ DB.parentNames=list; DB.parentLabel=label; saveDB(); } }
   window.openFamily=async function(){
     if(document.getElementById('family')){ famPull(); return; } // 이미 열려 있으면(알림을 또 누름) 새 메시지만
     FAM={msgs:[], last:0, busy:false};
@@ -66,7 +73,7 @@
   function famBubble(m){
     const log=document.getElementById('fam-log'); if(!log) return;
     const sys=log.querySelector('.msg.sys'); if(sys) sys.remove();
-    const mine=m.from===role();
+    const mine=isMine(m);
     const who=m.from==='parent'?(m.name||'아빠'):(DB.viewer?(DB.name||'아이'):'나');
     const d=document.createElement('div'); d.className='msg '+(mine?'me':'t');
     const big=/^\p{Extended_Pictographic}{1,3}$/u.test(m.text);
@@ -78,7 +85,7 @@
     if(!FAM||FAM.busy) return; const inp=document.getElementById('fam-input');
     const text=String(preset||(inp&&inp.value)||'').trim(); if(!text) return; if(inp&&!preset) inp.value='';
     FAM.busy=true;
-    try{ const r=await fetch(API()+'/api/family',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',id:lid(),from:role(),name:DB.viewer?famLabel():'',text})});
+    try{ const r=await fetch(API()+'/api/family',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',id:lid(),from:role(),name:DB.viewer?famLabel():'',dev:DB.viewer?devId():'',text})});
       const j=await r.json(); if(j.msg){ FAM.last=Math.max(FAM.last,j.msg.t); famBubble(j.msg); DB.famRead=FAM.last; saveDB(); } else alert('못 보냈어요: '+(j.error||r.status)); }
     catch(e){ alert('인터넷 연결을 확인해 주세요.'); if(inp&&!preset) inp.value=text; }
     FAM.busy=false;
@@ -136,7 +143,13 @@
     return `<div class="setrow"><div class="k">⏰ 매일 숙제 알림<small>아이 폰에 알림(오늘 과제를 다 했으면 안 울려요)</small></div>
       <div style="display:flex;gap:6px;align-items:center"><input type="time" id="remind-at" value="${s.remindAt}" style="border:2px solid #eee;border-radius:10px;padding:6px;font-weight:800">
       <button class="wpill" style="${s.enabled?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="saveRemind(${!s.enabled})">${s.enabled?'✅ 켜짐':'⬜ 꺼짐'}</button></div></div>
-      <div class="setrow"><div class="k">🔔 이 폰 알림<small>${({on:'켜져 있어요',off:'꺼져 있어요',denied:'차단됨 — 폰 설정에서 허용',unsupported:'이 브라우저는 지원 안 함','ios-install':'아이폰은 홈 화면에 추가 후 켜기'})[pushStatus()]}</small></div><button class="wpill" onclick="enablePush().then(()=>{ loadRemind(); })">${pushStatus()==='on'?'다시 등록':'켜기'}</button></div>`;
+      <div class="setrow"><div class="k">🔔 이 폰 알림<small>${({on:'켜져 있어요',off:'꺼져 있어요',denied:'차단됨 — 폰 설정에서 허용',unsupported:'이 브라우저는 지원 안 함','ios-install':'아이폰은 홈 화면에 추가 후 켜기'})[pushStatus()]}</small></div><div style="display:flex;gap:6px">${pushStatus()==='on'?'<button class="wpill" onclick="pushTest()">시험</button>':''}<button class="wpill" onclick="enablePush().then(()=>{ loadRemind(); })">${pushStatus()==='on'?'다시 등록':'켜기'}</button></div></div>`;
+  };
+  // 알림이 정말 오는지 스스로 확인: 서버가 이 역할로 등록된 폰 몇 대에 보냈는지 알려 준다
+  window.pushTest=async function(){
+    try{ const j=await (await fetch(API()+'/api/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test',id:lid(),role:role()})})).json();
+      alert(j.sent?`시험 알림을 폰 ${j.sent}대에 보냈어요. 몇 초 안에 안 오면 폰 설정 → 알림에서 크롬(또는 공부노트)을 허용해 주세요.`:'서버에 등록된 이 폰이 없어요. [다시 등록]을 눌러 주세요.'); }
+    catch(e){ alert('인터넷 연결을 확인해 주세요.'); }
   };
   window.loadRemind=async function(){ try{ const j=await (await fetch(API()+'/api/push?id='+encodeURIComponent(lid()))).json(); if(j.settings){ DB.remind=j.settings; DB.remindCounts=j.counts; saveDB(); } }catch(e){} rerender(); };
   window.saveRemind=async function(enabled){
@@ -149,18 +162,23 @@
   /* ================= 🐢 천천히 브레이크 ================= */
   const FAST_MS=3000;
   window.paceCheck=function(P){
-    if(P.pausing){ P.pausing=false; P.lastFast=false; return false; } // 멈춘 뒤 다른 답을 고르면 다시 생각한 것
+    // 멈춘 상태에서 다시 제출: 같은 답이면 "확신해"와 같고(빠른 답 그대로), 다른 답을 골랐으면 다시 생각한 것
+    if(P.pausing){ P.pausing=false; P.paceOk=true; P.lastFast=(P.buf===P.pausedBuf); return false; }
     if(P.paceOk) return false;
     P.lastFast=(Date.now()-(P.shownAt||0))<FAST_MS;
     if(!P.lastFast) return false;
     if((P.paceGap||0)>0){ P.paceGap--; return false; }
-    P.pausing=true; P.paceGap=2;
-    DB.pace=DB.pace||{}; DB.pace.pauses=(DB.pace.pauses||0)+1;
     const fb=document.getElementById('fb'); if(!fb) return false;
+    P.pausing=true; P.paceGap=2; P.pausedBuf=P.buf;
+    DB.pace=DB.pace||{}; DB.pace.pauses=(DB.pace.pauses||0)+1;
+    if(P.cur&&P.cur.choices){ const b=document.getElementById('ch'+P.buf); if(b) b.classList.add('pace-pick'); } // 뭘 골랐는지 보이게
     fb.className='feedback'; fb.innerHTML=`<div class="pace-box">🐢 잠깐! 너무 빨랐어. 한 번만 더 확인해 볼까?<div class="pace-row"><button onclick="paceAgain()">🔍 다시 볼게</button><button onclick="paceSure()">✅ 확신해</button></div></div>`;
     return true;
   };
-  window.paceAgain=function(){ const P=PLAY; if(!P) return; P.pausing=false; P.paceOk=true; P.lastFast=false; P.buf=''; const a=document.getElementById('ans'); if(a){ a.textContent='?'; a.classList.add('empty'); } const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.textContent='좋아, 천천히 다시 풀어 봐 👀'; } DB.pace.again=(DB.pace.again||0)+1; saveDB(); };
+  // 멈춘 상태에서 숫자판을 누르면 = 다시 보기로 치고 새로 입력(원래 답 뒤에 숫자가 붙지 않게). ⌫는 고쳐 쓰기라 답을 남김
+  window.paceEdit=function(P,fresh){ P.pausing=false; P.paceOk=true; P.lastFast=false; if(fresh) P.buf=''; DB.pace.again=(DB.pace.again||0)+1; saveDB();
+    const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.textContent='좋아, 천천히 다시 풀어 봐 👀'; } };
+  window.paceAgain=function(){ const P=PLAY; if(!P) return; document.querySelectorAll('.pace-pick').forEach(b=>b.classList.remove('pace-pick')); P.pausing=false; P.paceOk=true; P.lastFast=false; P.buf=''; const a=document.getElementById('ans'); if(a){ a.textContent='?'; a.classList.add('empty'); } const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.textContent='좋아, 천천히 다시 풀어 봐 👀'; } DB.pace.again=(DB.pace.again||0)+1; saveDB(); };
   window.paceSure=function(){ const P=PLAY; if(!P) return; P.pausing=false; P.paceOk=true; submit(); };
   window.paceRecord=function(P,ok){
     DB.pace=DB.pace||{}; const k=P.lastFast?'fast':'slow'; const s=DB.pace[k]=DB.pace[k]||{n:0,ok:0}; s.n++; if(ok) s.ok++;
