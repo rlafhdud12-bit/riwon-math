@@ -53,6 +53,7 @@
   .row3{display:flex;gap:8px;margin:2px 0 12px}
   .row3 button{flex:1;background:#fff;border:2px solid #eee;border-radius:16px;padding:12px 6px;font-weight:800;font-size:14px;color:var(--ink);box-shadow:0 3px 8px rgba(0,0,0,.05)}
   .row3 button.pri{background:var(--c);color:#fff;border-color:var(--c)}
+  .row3 button{white-space:nowrap} .row3:has(>button:nth-child(4)) button{font-size:13px;padding:12px 2px}
   details.more{margin-top:14px}
   details.more>summary{cursor:pointer;font-weight:800;color:var(--soft);font-size:14px;padding:10px 0;list-style:none}
   details.more>summary::before{content:'▸ ';}
@@ -250,9 +251,9 @@
   .msg.t{align-self:flex-start; background:#fff; border:2px solid #f1e6d8; border-bottom-left-radius:5px;}
   .msg.sys{align-self:center; background:none; color:var(--soft); font-size:13px; font-weight:700;}
   .chat-in{display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:#fff; border-top:2px solid #f1e6d8;}
-  .chat-in input{flex:1; border:2px solid #eee; border-radius:16px; padding:12px 14px; font-size:16px; font-weight:700; outline:none;}
+  .chat-in input{flex:1; border:2px solid #eee; border-radius:16px; padding:12px 14px; font-size:16px; font-weight:700; outline:none; min-width:0;}
   .chat-in input:focus{border-color:var(--c,#ff9f43);}
-  .chat-in button{background:var(--c,#ff9f43); color:#fff; border-radius:16px; padding:0 18px; font-weight:900; font-size:16px;}
+  .chat-in button{background:var(--c,#ff9f43); color:#fff; border-radius:16px; padding:0 18px; font-weight:900; font-size:16px; white-space:nowrap; flex-shrink:0;}
   .chat-in button:disabled{opacity:.5;}
   .chips{display:flex; gap:8px; padding:0 12px 8px; overflow-x:auto; background:#fff;}
   .chips button{flex:0 0 auto; background:#fff5e8; border:2px solid #ffd9a8; border-radius:14px; padding:7px 12px; font-size:13.5px; font-weight:800; color:var(--ink);}
@@ -345,7 +346,7 @@ async function syncNow(){
   if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
-    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
+    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; // 이름은 폰에만 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
     db.hw={done:(DB.hw&&DB.hw.done)||{}}; // 숙제 문제 본문(시계 그림 등)은 크니 결과만
     db.catalog=UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]).map(u=>({id:u.id,name:u.name,cats:(MODULES[u.id].gens||[]).map(g=>g.cat)})); // 리포트 분석용 유형 목록
     const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
@@ -750,6 +751,7 @@ function advance(){
 }
 function renderCard(){
   const P=PLAY, c=P.cur; let header='';
+  P.shownAt=Date.now(); P.paceOk=false; P.pausing=false; // 🐢 천천히 브레이크: 문제가 뜬 시각
   if(P.mode==='master'){
     const pct=Math.round(P.solved.size/P.total*100);
     header=`<div class="quiz-top"><span class="score-pill">⭐ ${P.score}</span><span class="score-pill">${P.solved.size}/${P.total} 완료</span><span class="score-pill">🔥 ${P.streak}</span></div>
@@ -796,9 +798,11 @@ function choosePick(i){
 }
 function submit(){
   const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
+  if(typeof paceCheck==='function'&&paceCheck(P)) return; // 너무 빠르면 채점 전에 한 번 멈춤
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
   markStat(c.unitId||P.unitId,c.cat,ok); // 과제(여러 단원 섞임)는 문제의 단원으로 기록
+  if(typeof paceRecord==='function') paceRecord(P,ok);
   const ansEl=$('#ans');
   if(c.choices){ c.choices.forEach((_,i)=>{ const b=$('#ch'+i); if(!b)return; b.disabled=true;
     if(i===c.a) b.classList.add('correct'); else if(i===val&&!ok) b.classList.add('wrongpick'); }); }
@@ -3248,9 +3252,12 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="daily.js"></script>
 <script src="expr.js"></script>
 <script src="coach.js"></script>
+<script src="family.js"></script>
 <script src="ui.js"></script>
 <script>
 home();
+if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) famTick(); }); }
+if(typeof routeHash==='function') routeHash();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
 else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
 </script>

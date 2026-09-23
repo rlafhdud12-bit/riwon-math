@@ -1,9 +1,9 @@
 /* 초등노트 — 서비스워커 v9
    HTML(페이지)은 네트워크 우선 → 새 배포가 바로 반영, 오프라인이면 캐시 사용.
    아이콘·학년 콘텐츠 등 정적 파일은 캐시 우선(=새 학년 파일 추가/수정 시 이 버전을 올려야 반영). */
-const CACHE = 'riwon-math-v20';
+const CACHE = 'riwon-math-v21';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-180.png',
-  './grades/g1.js', './grades/g3-time.js', './daily.js', './expr.js', './coach.js', './ui.js'];
+  './grades/g1.js', './grades/g3-time.js', './daily.js', './expr.js', './coach.js', './family.js', './ui.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -50,4 +50,22 @@ self.addEventListener('fetch', e => {
       return resp;
     }))
   );
+});
+
+/* 🔔 웹 푸시(2026-09-24): 서버가 보낸 알림을 앱이 꺼져 있어도 표시하고, 누르면 앱을 연다 */
+self.addEventListener('push', e => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || '공부노트', {
+    body: d.body || '', icon: 'icon-180.png', badge: 'icon-180.png', tag: d.tag || undefined, renotify: !!d.tag,
+    data: { url: d.url || './' }
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  const hash = new URL(url).hash;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    for (const w of ws) { if (w.url.startsWith(self.registration.scope)) { if (hash) w.postMessage({ hash }); return w.focus(); } }
+    return self.clients.openWindow(url);
+  }));
 });

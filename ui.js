@@ -23,9 +23,10 @@
       <div class="hbar"><div class="htitle">${appTitle()} ✨</div>
         <div class="hright"><span class="hpill">🎟️ ${DB.stickers}</span>${streak?`<span class="hpill">🔥 ${streak}일</span>`:''}<button class="hpill" onclick="toggleMute()">${DB.muted?'🔇':'🔊'}</button></div></div>
       ${gradeBar}
+      ${typeof notifBarHTML==='function'?notifBarHTML():''}
       ${typeof questCardHTML==='function'?questCardHTML():''}
       ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
-      <div class="row3"><button class="pri" onclick="openChat(null)">💬 선생님</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
+      <div class="row3"><button class="pri" onclick="openChat(null)">🤖 선생님</button><button onclick="openFamily()">💬 ${typeof famLabel==='function'?famLabel():'아빠'}${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
       ${math.length?head('🧮','수학')+grid(math):''}
       ${others.length?`<details class="more"><summary>${others.map(x=>x.s.name).join(' · ')} — 단원 ${others.reduce((n,x)=>n+x.us.length,0)}개</summary>${others.map(x=>head(x.s.emoji,x.s.name)+grid(x.us)).join('')}</details>`:''}
       ${!math.length&&!others.length?`<div class="credit" style="margin:34px 0;font-size:16px">📚 ${g}학년 내용은 곧 추가될 거예요!</div>`:''}
@@ -53,6 +54,7 @@
       <div class="topbar"><button class="back" onclick="home()">←</button><div class="t">📊 공부 기록</div><div class="spacer"></div><button class="mini" onclick="renderSettings()">🔧 부모 설정</button></div>
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
       ${whyCardHTML(5)}
+      ${typeof paceSummaryHTML==='function'?paceSummaryHTML():''}
       <div class="card"><h3>📅 최근 7일</h3>${weekChart()}</div>
       <details class="more"><summary>단원별 정답률</summary><div class="card" style="margin-top:8px">${unitRowsHTML()}</div></details>
       <div class="credit">총 ${DB.totalSolved}문제 · 정답률 ${DB.totalSolved?Math.round(DB.totalCorrect/DB.totalSolved*100):0}% · 공부 ${fmtTime(DB.studySeconds)}</div>`;
@@ -68,6 +70,7 @@
         <div class="setrow"><div class="k">👧 아이 이름<small>제목이 "${appTitle()}"로 보여요 · 이 폰에만 저장</small></div><button class="wpill" onclick="setChildName()">${DB.name?'바꾸기':'넣기'}</button></div>
         <div class="setrow"><div class="k">📚 과제 양<small>보통 ≈25분 · 많이 ≈40분(퀴즈+심화)</small></div><div style="display:flex;gap:6px">${pill((DB.dailyLevel||'normal')==='normal','보통',"DB.dailyLevel='normal';saveDB();renderSettings(true)")}${pill(DB.dailyLevel==='more','많이',"DB.dailyLevel='more';saveDB();renderSettings(true)")}</div></div>
         <div class="setrow"><div class="k">👨‍👩‍👧 가족 코드<small>부모 폰에서 이 코드를 넣으면 같은 기록이 보여요</small></div><button class="wpill" onclick="showFamilyCode()">보기</button></div>
+        ${typeof remindSettingHTML==='function'?remindSettingHTML():''}
       </div>
       <div class="card"><h3>🔒 학년</h3><p class="dim">잠긴 학년은 PIN 없이 못 들어가요. 열린 학년이 둘 이상이면 홈에 선택 칩이 생겨요.</p>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${[1,2,3,4,5,6].map(n=>`<button class="wpill" style="${isLocked(n)?'opacity:.5':'border-color:var(--c);color:var(--c-dark)'}" onclick="DB.locked=DB.locked||{};DB.locked[${n}]=!DB.locked[${n}];if(DB.locked[${n}]&&DB.grade===${n})DB.grade=3;saveDB();renderSettings(true)">${isLocked(n)?'🔒':'🔓'} ${n}학년</button>`).join('')}</div></div>
@@ -87,11 +90,12 @@
     app.innerHTML=`
       <div class="hbar"><div class="htitle">${appTitle()} <span class="dim">· 부모</span></div>
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
+      ${typeof notifBarHTML==='function'?notifBarHTML():''}
+      <div class="row3"><button class="pri" onclick="openFamily()">💬 ${DB.name?nameI(DB.name):'아이'}와 채팅${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button style="background:#e056a0;border-color:#e056a0;color:#fff" onclick="renderGallery()">💌 응원 카드</button><button onclick="openChat(null)">🤖 선생님</button></div>
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
       ${typeof parentReportHTML==='function'?parentReportHTML():''}
       ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
-      <div class="row3"><button class="pri" style="background:#e056a0;border-color:#e056a0" onclick="renderGallery()">💌 응원 카드 보내기</button><button onclick="openChat(null)">💬 선생님에게 묻기</button></div>
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
       <details class="more"><summary>더 보기 — 최근 7일 · 단원별 정답률</summary>
@@ -100,6 +104,8 @@
       <details class="more"><summary>설정</summary>
         <div class="card" style="margin-top:8px">
           <div class="setrow"><div class="k">👧 아이 이름<small>이 폰 제목 표시용</small></div><button class="wpill" onclick="setChildName()">${DB.name?'바꾸기':'넣기'}</button></div>
+          <div class="setrow"><div class="k">🙋 채팅에서 내 이름</div><div style="display:flex;gap:6px">${['아빠','엄마'].map(f=>`<button class="wpill" style="${(DB.parentLabel||'아빠')===f?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="DB.parentLabel='${f}';saveDB();home()">${f}</button>`).join('')}</div></div>
+          ${typeof remindSettingHTML==='function'?remindSettingHTML():''}
           <div class="setrow"><div class="k">가족 코드<small>${DB.lid}</small></div><button class="wpill" onclick="leaveViewer()">함께 보기 끄기</button></div>
         </div></details>`;
   };
