@@ -264,10 +264,14 @@
     Promise.all(files.map(f=>new Promise(res=>{ const rd=new FileReader(); rd.onload=()=>{ const img=new Image(); img.onload=()=>{ const max=1200, sc=Math.min(1,max/Math.max(img.width,img.height)); const cv=document.createElement('canvas'); cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); let q=.82,u=cv.toDataURL('image/jpeg',q); while(u.length>850000&&q>.4){ q-=.1; u=cv.toDataURL('image/jpeg',q); } res(u); }; img.src=rd.result; }; rd.readAsDataURL(f); })))
     .then(async images=>{
       const jobId=Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b=>(b%36).toString(36)).join('')+Date.now().toString(36).slice(-4);
-      DB.hwJobs=DB.hwJobs||[]; DB.hwJobs.unshift({jobId,t:Date.now(),status:'pending'}); DB.hwJobs=DB.hwJobs.slice(0,20); saveDB(); renderDashboard();
-      // 백그라운드 함수는 CORS 응답을 못 주므로 no-cors(단순 요청)로 보내고, 상태는 /api/homework 로 확인한다
-      try{ await fetch((window.HW_API||TUTOR_API)+'/.netlify/functions/homework-background',{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({id:learnerId(),jobId,images,note})}); }
-      catch(e){ const j=DB.hwJobs.find(x=>x.jobId===jobId); if(j){ j.status='error'; j.error='보내기 실패(인터넷 확인)'; } saveDB(); renderDashboard(); return; }
+      DB.hwJobs=DB.hwJobs||[]; DB.hwJobs.unshift({jobId,t:Date.now(),status:'sending'}); DB.hwJobs=DB.hwJobs.slice(0,20); saveDB(); home();
+      const rec=()=>DB.hwJobs.find(x=>x.jobId===jobId);
+      try{
+        const r=await fetch((window.HW_API||TUTOR_API)+'/api/homework-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),jobId,images,note})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok&&r.status!==202){ const x=rec(); if(x){ x.status='error'; x.error=j.error||('서버 오류 '+r.status); } saveDB(); home(); alert('숙제를 못 보냈어요: '+(j.error||r.status)); return; }
+        const x=rec(); if(x) x.status='pending'; saveDB(); home();
+      }catch(e){ const x=rec(); if(x){ x.status='error'; x.error='보내기 실패 — 인터넷 연결을 확인해 주세요'; } saveDB(); home(); alert('숙제를 못 보냈어요. 인터넷 연결을 확인해 주세요.'); return; }
       pollHomework(jobId);
     });
   };
@@ -275,28 +279,28 @@
     let unknown=0;
     for(let k=0;k<45;k++){ await new Promise(r=>setTimeout(r,6000));
       try{ const r=await fetch((window.HW_API||TUTOR_API)+'/api/homework?id='+encodeURIComponent(learnerId())+'&job='+jobId); const j=await r.json(); const job=j.job||{}; const rec=(DB.hwJobs||[]).find(x=>x.jobId===jobId);
-        if(job.status==='unknown'&&++unknown>=6){ if(rec){ rec.status='error'; rec.error='서버에 닿지 못했어요. 다시 시도해 주세요'; saveDB(); renderDashboard(); } return; }
-        if(job.status==='done'||job.status==='error'){ if(rec){ rec.status=job.status; rec.error=job.error; rec.title=job.title; rec.count=job.count; } await fetchHomework(true); saveDB(); if(document.querySelector('.topbar .t')?.textContent.includes('공부 기록')) renderDashboard(); if(job.status==='done') alert(`숙제가 만들어졌어요! "${job.title}" ${job.count}문제 — 아이 폰에 과제로 나타나요 📚`); return; }
+        if(job.status==='unknown'&&++unknown>=6){ if(rec){ rec.status='error'; rec.error='서버에 닿지 못했어요. 다시 시도해 주세요'; saveDB(); if(!PLAY&&!curUnit) home(); } return; }
+        if(job.status==='done'||job.status==='error'){ if(rec){ rec.status=job.status; rec.error=job.error; rec.title=job.title; rec.count=job.count; } await fetchHomework(true); saveDB(); if(!PLAY&&!curUnit) home(); if(job.status==='done') alert(`숙제가 만들어졌어요! "${job.title}" ${job.count}문제 — 아이 폰에 과제로 나타나요 📚`); else alert('숙제 만들기 실패: '+(job.error||'오류')); return; }
       }catch(e){}
     }
   };
   window.removeHomework=async function(jobId){ if(!confirm('이 숙제 세트를 지울까요?')) return; try{ const r=await fetch(TUTOR_API+'/api/homework',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),action:'remove',jobId})}); const j=await r.json(); if(j.sets){ DB.hw=DB.hw||{done:{}}; DB.hw.sets=j.sets; } DB.hwJobs=(DB.hwJobs||[]).filter(x=>x.jobId!==jobId); saveDB(); }catch(e){} renderDashboard(); };
   window.parentHomeworkHTML=function(){
     const sets=(DB.hw&&DB.hw.sets)||[], done=(DB.hw&&DB.hw.done)||{}, jobs=DB.hwJobs||[];
-    const pending=jobs.filter(j=>j.status==='pending').map(j=>`<div class="logrow"><span>⏳ 만드는 중… (1~2분)</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
-    const errs=jobs.filter(j=>j.status==='error').map(j=>`<div class="logrow"><span style="color:#e8503a">⚠️ ${j.error||'오류'}</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
-    const rows=sets.map(s=>{ const d=done[s.jobId]; return `<div class="cat-row" style="padding:8px 0;border-bottom:1px solid #f1e6d8">
-      <div class="lab"><span>📚 ${s.title} <span style="color:var(--soft);font-size:12px">${s.problems.length}문제 · ${fmtAgo(s.t)}</span></span><span>${d?`✅ ${d.correct}/${d.total}`:'⬜ 아직'}</span></div>
-      ${s.source&&s.source.length?`<details style="margin:4px 0"><summary style="font-size:13px;color:#2e6fd1;font-weight:800;cursor:pointer">🔍 사진에서 읽은 문제와 원인 ${s.source.length}개</summary>${s.source.map(x=>`<div style="font-size:13px;margin:6px 0 0;padding:6px 8px;background:#fff9f0;border-radius:10px"><b>${x.q}</b><br>아이 답: <span style="color:#e8503a">${x.kidAnswer||'?'}</span> · 정답: ${x.correct}<br><span style="color:#7a4a1e">💭 ${x.why}</span></div>`).join('')}</details>`:''}
-      ${d&&d.wrongQs&&d.wrongQs.length?`<div style="font-size:12.5px;color:#e8503a;margin-top:4px">틀린 것: ${d.wrongQs.slice(0,4).join(' / ')}</div>`:''}
-      <button class="wpill" style="margin-top:6px;border-color:#e8503a;color:#e8503a" onclick="removeHomework('${s.jobId}')">삭제</button></div>`; }).join('');
-    return `<div class="card"><h3>📸 사진으로 숙제 만들기</h3>
-      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">문제집에서 <b>틀린 문제</b>가 보이게 찍어 올리면(최대 3장), 선생님이 왜 틀렸는지 읽고 <b>비슷한 문제 8~12개</b>를 만들어 아이 폰 과제에 넣어요. 사진은 저장하지 않아요.</p>
-      <button class="bigbtn" style="background:#2e86de" onclick="document.getElementById('hwfile').click()">📸 사진 고르기 (앨범·카메라)</button>
+    const live=jobs.filter(j=>j.status==='sending'||j.status==='pending').map(j=>`<div class="logrow"><span>${j.status==='sending'?'📤 보내는 중…':'⏳ 선생님이 문제를 만드는 중… (1~2분)'}</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
+    const errs=jobs.filter(j=>j.status==='error').slice(0,2).map(j=>`<div class="logrow"><span style="color:#e8503a">⚠️ ${j.error||'오류'}</span><span class="d">${fmtAgo(j.t)}</span></div>`).join('');
+    const rows=sets.map(s=>{ const d=done[s.jobId]; return `<div class="hwrow">
+      <div class="lab"><span>📚 ${s.title} <span class="dim">${s.problems.length}문제 · ${fmtAgo(s.t)}</span></span><span>${d?`✅ ${d.correct}/${d.total}`:'⬜ 아직'}</span></div>
+      ${s.source&&s.source.length?`<details><summary>🔍 사진에서 읽은 문제 ${s.source.length}개 · 왜 틀렸나</summary>${s.source.map(x=>`<div class="srcbox"><b>${x.q}</b><br>아이 답 <span style="color:#e8503a">${x.kidAnswer||'?'}</span> · 정답 ${x.correct}<br><span style="color:#7a4a1e">💭 ${x.why}</span></div>`).join('')}</details>`:''}
+      ${d&&d.wrongQs&&d.wrongQs.length?`<div class="dim" style="color:#e8503a">틀린 것: ${d.wrongQs.slice(0,4).join(' / ')}</div>`:''}
+      <button class="linkbtn" onclick="removeHomework('${s.jobId}')">삭제</button></div>`; }).join('');
+    return `<div class="card">
+      <h3>📸 사진으로 숙제 만들기</h3>
+      <p class="dim">문제집에서 틀린 문제가 보이게 찍으면(최대 3장) 선생님이 원인을 읽고 비슷한 문제 8~12개를 아이 과제에 넣어요. 사진은 저장하지 않아요.</p>
+      <button class="bigbtn" style="background:#2e86de;margin-top:4px" onclick="document.getElementById('hwfile').click()">📸 사진 고르기</button>
       <input type="file" id="hwfile" accept="image/*" multiple style="display:none" onchange="createHomeworkFromPhotos(this)">
-      ${pending}${errs}
-      <div style="margin-top:10px">${rows||'<p style="color:var(--soft);font-size:13px">아직 만든 숙제가 없어요.</p>'}</div>
-      <button class="bigbtn ghost" onclick="fetchHomework(true).then(()=>renderDashboard())">🔄 새로 고침</button>
+      ${live}${errs}
+      ${rows?`<div style="margin-top:8px">${rows}</div>`:''}
     </div>`;
   };
 })();

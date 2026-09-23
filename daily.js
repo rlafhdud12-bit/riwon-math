@@ -160,15 +160,15 @@
     const streak=dailyStreak();
     const rows=D.tasks.map(t=>`<div class="cat-row" style="display:flex;align-items:center;gap:8px;padding:6px 0">
       <span style="font-size:20px">${t.done?'✅':'⬜'}</span>
-      <div style="flex:1"><div style="font-weight:800">${t.title}</div><div class="sub" style="margin:0">${t.done?(t.total?`${t.total}문제 중 바로 맞힌 ${t.correct}개`:'완료'):t.sub}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div><div class="sub" style="margin:0">${t.done?(t.total?`${t.total}문제 중 바로 맞힌 ${t.correct}개`:'완료'):t.sub}</div></div>
       ${t.done||DB.viewer?'':`<button class="wpill" style="border-color:var(--c);color:var(--c-dark)" onclick="startDaily('${t.id}')">풀기</button>`}
     </div>`).join('');
     return `<div class="card" style="border:2px solid #ffd9a8">
       <h3 style="margin-bottom:6px">🎯 오늘의 과제 <span style="font-size:13px;color:var(--soft);font-weight:700;margin-left:auto">${done}/${n} ${streak?`· 🔥 ${streak}일 연속`:''}</span></h3>
       <div class="progress" style="height:12px;margin:0 0 6px"><div class="bar" style="width:${pct}%;background:${pct===100?'#19a974':'var(--c)'}"></div></div>
       ${rows}
-      ${D.allDone?`<div class="tipbox" style="margin-top:8px">🏆 오늘 과제 완료! ${dailyRewardText(D)}<br><span style="font-size:12.5px;color:var(--soft)">지금부터 더 푸는 건 전부 보너스 스티커 ✨</span></div>`
-                 :`<div style="font-size:12.5px;color:var(--soft);margin-top:6px">🎟️ 스티커는 4개를 다 끝내면! 정확도 90%↑ 과제는 +1, 매일 이어서 하면 🔥 연속 보너스</div>`}
+      ${D.allDone?`<div class="tipbox" style="margin-top:8px">🏆 오늘 과제 완료! ${dailyRewardText(D)}</div>`
+                 :`<div style="font-size:12px;color:var(--soft);margin-top:6px">🎟️ 다 끝내면 스티커 · 정확도 90%↑ +1 · 🔥 연속 보너스</div>`}
     </div>`;
   };
 
