@@ -658,6 +658,7 @@ function unitStages(u){
     {id:'concept', t:'개념'},
     {id:'game',    t:u.gname||'게임', opt:'game'},
     {id:'quiz',    t:'퀴즈'},
+    {id:'expr',    t:'✍️ 식 세우기', opt:'expr'},
     {id:'think',   t:'🧠 생각', opt:'think'},
     {id:'bank',    t:'문제은행', opt:'bank'},
     {id:'review',  t:'복습·분석', opt:'review'},
@@ -669,6 +670,7 @@ function unitStages(u){
     if(s.id==='game' && !(MODULES[u.id].games&&MODULES[u.id].games.length)) return false;
     if(s.id==='think' && !MODULES[u.id].thinkGens) return false;
     if(s.id==='deep' && !MODULES[u.id].deepGens) return false;
+    if(s.id==='expr' && !MODULES[u.id].exprGens) return false;
     return true;
   }).map((s,i)=>Object.assign({}, s, {n:'STEP '+(i+1)}));
 }
@@ -697,6 +699,7 @@ function renderUnit(){
   else if(curStage==='bank') startBank(u.id,body);
   else if(curStage==='review') renderReview(body,u.id);
   else if(curStage==='deep') startMaster(u.id,body,'deep');
+  else if(curStage==='expr') startExprStage(u.id,body);
 }
 
 /* 그림게임 서브탭 */
@@ -722,12 +725,12 @@ function pickGen(unitId){
   for(let i=0;i<gens.length;i++){ r-=w[i]; if(r<=0) return gens[i]; }
   return gens[gens.length-1];
 }
-function buildMasterSet(unitId, variant){
+function buildMasterSet(unitId, variant, n){
   const m=MODULES[unitId];
   const gens = variant==='deep'? m.deepGens : variant==='think'? m.thinkGens : m.gens;
   const per=gens.length>=4?2:3, set=[];
   gens.forEach(g=>{ for(let k=0;k<per;k++) set.push(genOne(unitId,g)); });
-  return shuffle(set).slice(0, Math.min(14, set.length));
+  return shuffle(set).slice(0, Math.min(n||14, set.length));
 }
 
 /* ===================== 플레이 엔진 ===================== */
@@ -785,6 +788,7 @@ function renderCard(){
         <button class="key" onclick="press('0')">0</button>
         <button class="key ok" onclick="press('ok')">확인</button>
       </div>`}
+      ${typeof padButton==='function'?padButton():''}
     </div>`;
 }
 function press(k){
@@ -825,7 +829,7 @@ function submit(){
     c.why=diagnose(c,c.given);
     fb.className='feedback no'; fb.innerHTML='앗! 정답은 '+ansShow(c)+' 예요.'+(c.why?`<div style="margin-top:6px;font-size:14.5px;color:#7a4a1e">🔍 ${c.why}</div>`:' 왜 그런지 천천히 살펴보자 👀'); if(ansEl)ansEl.style.borderColor='#e8503a';
     $('#hint').classList.add('show');
-    if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); }
+    if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); if(P.wrongQs&&!c.retry) P.wrongQs.push(String(c.q).replace(/<[^>]+>/g,'').slice(0,40)); }
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
     else { const e=DB.wrong.find(w=>w.key===c.key); if(e)e.miss++; P.queue.push(c); }
     saveDB();
@@ -1019,11 +1023,19 @@ function renderDashboard(){
         ?`<p style="font-size:13.5px;margin:0 0 10px">이 폰은 <b>함께 보기 모드</b>예요. 아이 폰 기록을 그대로 보여주고, 여기서 푼 건 저장되지 않아요.<br><span style="color:var(--soft)">코드: ${DB.lid}</span></p>
           <button class="bigbtn ghost" onclick="pullNow(true).then(()=>renderDashboard())">🔄 지금 새로 가져오기</button>
           <button class="bigbtn" style="background:#e056a0" onclick="renderGallery()">💌 응원 카드 보내기 (앨범에서)</button>
-          <button class="bigbtn ghost" onclick="leaveViewer()">함께 보기 모드 끄기</button>`
+          <button class="bigbtn ghost" onclick="leaveViewer()">함께 보기 모드 끄기</button>
+        </div>
+        ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
+        <div class="card" style="display:none">`
         :`<p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">아이 폰에서는 코드를 보여주고, 부모 폰에서는 코드를 입력하면 같은 기록이 보여요.</p>
           <button class="bigbtn ghost" onclick="showFamilyCode()">📱 이 폰의 가족 코드 보기</button>
           <button class="bigbtn ghost" onclick="enterFamilyCode()">👀 가족 코드 입력 (부모 폰)</button>`}
     </div>
+    ${!DB.viewer?`<div class="card">
+      <h3>📚 과제 양 (부모 PIN)</h3>
+      <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">보통 = 약점 12·시계 8·식 세우기 8·단원 퀴즈·다시 풀기 8 (약 25분) / 많이 = 16·12·12·퀴즈+심화·10 (약 40분)</p>
+      <div style="display:flex;gap:8px">${[['normal','보통'],['more','많이']].map(([k,t])=>`<button class="wpill" style="${(DB.dailyLevel||'normal')===k?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="if(parentOK()){DB.dailyLevel='${k}';saveDB();renderDashboard();}">${(DB.dailyLevel||'normal')===k?'✅':'⬜'} ${t}</button>`).join('')}</div>
+    </div>`:''}
     <div class="card">
       <h3>🔒 학년 잠금 (부모 PIN)</h3>
       <p style="font-size:13.5px;color:var(--soft);margin:0 0 10px">잠근 학년은 PIN을 넣어야 열려요. 딴 학년으로 새지 않게!</p>
@@ -3326,10 +3338,11 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="grades/g1.js"></script>
 <script src="grades/g3-time.js"></script>
 <script src="daily.js"></script>
+<script src="expr.js"></script>
 <script>
 home();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
-else { fetchCheer(true); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
+else { fetchCheer(true); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
 </script>
 </body>
 </html>

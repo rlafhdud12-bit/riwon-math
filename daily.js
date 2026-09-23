@@ -5,7 +5,10 @@
    - 엔진(index.html) 뒤에 로드. 엔진의 finishMaster/finishReview 가 dailyOnFinish() 를 호출한다.
    ========================================================= */
 (function(){
-  const WEAK_N=8, TIME_N=6, REVIEW_N=6;
+  // 과제 양: 부모가 고름(DB.dailyLevel). 보통 ≈ 25분, 많이 ≈ 40분
+  const LEVELS={normal:{weak:12,time:8,expr:8,review:8,deep:false}, more:{weak:16,time:12,expr:12,review:10,deep:true}};
+  const L=()=>LEVELS[DB.dailyLevel]||LEVELS.normal;
+  const WEAK_N=()=>L().weak, TIME_N=()=>L().time, EXPR_N=()=>L().expr, REVIEW_N=()=>L().review;
   const mathUnits=()=>UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math');
   const dkey=()=>todayKey();
   function todayTask(){ return (DB.daily||{})[dkey()]||null; }
@@ -44,16 +47,27 @@
     DB.daily=DB.daily||{}; if(DB.daily[dkey()]) return DB.daily[dkey()];
     const u=pickUnitOfDay(); const wrongPool=DB.wrong.filter(w=>mathUnits().some(m=>m.id===w.unitId));
     const tasks=[
-      {id:'weak',  title:'🎯 약점 훈련',        sub:`가장 많이 틀린 유형 ${WEAK_N}문제`, n:WEAK_N,  done:false, correct:0, total:0},
-      {id:'time',  title:'🕰️ 시계 집중',        sub:`시각과 시간 ${TIME_N}문제`,          n:TIME_N,  done:false, correct:0, total:0, unit:'time'},
-      {id:'unit',  title:`📘 오늘의 단원 · ${u.name}`, sub:'퀴즈 한 세트 클리어',         n:0,       done:false, correct:0, total:0, unit:u.id},
-      {id:'review',title:'🔁 틀린 문제 다시',   sub:wrongPool.length?`최근 오답 ${Math.min(REVIEW_N,wrongPool.length)}개`:'틀린 문제가 없어요 — 자동 완료!', n:Math.min(REVIEW_N,wrongPool.length), done:wrongPool.length===0, correct:0, total:0},
+      {id:'weak',  title:'🎯 약점 훈련',        sub:`가장 많이 틀린 유형 ${WEAK_N()}문제`, n:WEAK_N(),  done:false, correct:0, total:0},
+      {id:'time',  title:'🕰️ 시계 집중',        sub:`시각과 시간 ${TIME_N()}문제`,          n:TIME_N(),  done:false, correct:0, total:0, unit:'time'},
+      {id:'expr',  title:'✍️ 식 세우기',        sub:`상황을 식으로 ${EXPR_N()}문제 + 다른 방법으로`, n:EXPR_N(), done:false, correct:0, total:0},
+      {id:'unit',  title:`📘 오늘의 단원 · ${u.name}`, sub:L().deep?'퀴즈 + 심화 클리어':'퀴즈 한 세트 클리어', n:0, done:false, correct:0, total:0, unit:u.id, deep:L().deep, quizDone:false},
+      {id:'review',title:'🔁 틀린 문제 다시',   sub:wrongPool.length?`최근 오답 ${Math.min(REVIEW_N(),wrongPool.length)}개`:'틀린 문제가 없어요 — 자동 완료!', n:Math.min(REVIEW_N(),wrongPool.length), done:wrongPool.length===0, correct:0, total:0},
     ];
     DB.daily[dkey()]={tasks, made:Date.now(), allDone:null};
+    syncHwTasks(DB.daily[dkey()]);
     // 오래된 기록 정리(90일)
     const keys=Object.keys(DB.daily).sort(); while(keys.length>90) delete DB.daily[keys.shift()];
     saveDB(); return DB.daily[dkey()];
   };
+
+  /* 📸 부모가 만든 사진 숙제 → 오늘 과제에 추가(아직 안 푼 세트만, 하루에 처음 보이는 것부터) */
+  function syncHwTasks(D){
+    if(!D||DB.viewer||typeof hwPendingSets!=='function') return;
+    let changed=false;
+    hwPendingSets().forEach(s=>{ const id='hw:'+s.jobId; if(!D.tasks.some(t=>t.id===id)){ D.tasks.splice(Math.min(1,D.tasks.length),0,{id, title:`📚 엄마 숙제 · ${s.title}`, sub:`${s.problems.length}문제 (문제집에서 틀린 유형)`, n:s.problems.length, done:false, correct:0, total:0, hw:s.jobId}); if(D.allDone) D.allDone=null; changed=true; } });
+    if(changed) saveDB();
+  }
+  window.syncHwTasks=syncHwTasks;
 
   /* ---------- 과제 시작 ---------- */
   function dailyScreen(title){
@@ -64,16 +78,22 @@
   window.startDaily=function(id){
     const D=ensureDaily(); if(!D) return; const task=D.tasks.find(t=>t.id===id); if(!task) return;
     if(DB.viewer){ alert('함께 보기 모드에서는 아이 기록만 볼 수 있어요.'); return; }
-    if(id==='unit'){ openUnit(task.unit); setStage('quiz'); return; }
+    if(id==='unit'){ openUnit(task.unit); setStage(task.deep&&task.quizDone?'deep':'quiz'); return; }
+    if(id==='expr'){
+      const body=dailyScreen(task.title);
+      startExprSet(buildExprSet(EXPR_N()),{body, stop:()=>home(), onDone:(ft,total)=>{ dailyTaskDone(task, ft, total, body, `다른 방법 성공 ${EX_METHOD()}`); }});
+      return;
+    }
+    if(id.startsWith('hw:')){ const body=dailyScreen(task.title); startHomework(task.hw,{body, daily:id}); return; }
     if(id==='review'){
-      const pool=DB.wrong.filter(w=>mathUnits().some(m=>m.id===w.unitId)).slice(0,REVIEW_N);
+      const pool=DB.wrong.filter(w=>mathUnits().some(m=>m.id===w.unitId)).slice(0,REVIEW_N());
       if(!pool.length){ task.done=true; saveDB(); dailyCheckAll(); home(); return; }
       const body=dailyScreen(task.title);
       PLAY={mode:'review',unitId:pool[0].unitId,body,daily:id,queue:shuffle(pool.map(p=>Object.assign({fromWrong:true},p))),startN:pool.length,fixed:0,score:0,streak:0,corr:0,cur:null,buf:'',locked:false};
       advance(); return;
     }
     const body=dailyScreen(task.title);
-    let set = id==='time' ? buildMasterSet('time').slice(0,TIME_N) : buildDailyWeakSet(WEAK_N);
+    let set = id==='time' ? buildMasterSet('time',null,TIME_N()) : buildDailyWeakSet(WEAK_N());
     set.forEach((s,i)=>s.id=i);
     PLAY={mode:'master',unitId:set[0]?set[0].unitId:'time',body,daily:id,queue:set,total:set.length,solved:new Set(),score:0,retry:0,streak:0,corr:0,cur:null,buf:'',locked:false};
     advance();
@@ -99,36 +119,43 @@
     return `🎟️ 스티커 +${r.total} <span style="font-size:13px;font-weight:700;color:var(--soft)">(과제 완료 ${r.base}${r.acc?` · 정확도 보너스 +${r.acc}`:''}${r.streak?` · 🔥 ${dailyStreak()}일 연속 보너스 +${r.streak}`:''})</span>`;
   };
   // 반환값 true = 과제 화면을 직접 그렸으니 엔진은 기본 결과 화면을 그리지 말 것
+  window.EX_METHOD=function(){ try{ const e=typeof exState==='function'?exState():null; return e?`${e.methodOk}/${e.methodTotal}`:''; }catch(err){ return ''; } };
   window.dailyOnFinish=function(P){
     const D=todayTask(); if(!D) return false;
     if(P.daily){
       const task=D.tasks.find(t=>t.id===P.daily); if(!task) return false;
-      const total=P.mode==='review'?P.startN:P.total, correct=P.mode==='review'?P.fixed:(P.total-Math.min(P.retry,P.total));
-      const firstTry=P.mode==='review'?P.fixed:P.solved.size-P.retry; // 첫 시도에 맞힌 수(재도전 제외)
-      markDone(task,Math.max(0,firstTry),total);
-      logEvent(P.unitId,'daily',1);
+      const total=P.mode==='review'?P.startN:P.total;
+      const firstTry=P.mode==='review'?P.fixed:P.solved.size-P.retry; // 첫 시도에 맞힌 수(재도전 외)
+      if(P.hw){ DB.hw=DB.hw||{done:{}}; DB.hw.done=DB.hw.done||{}; DB.hw.done[P.hw]={t:Date.now(),correct:Math.max(0,firstTry),total,wrongQs:(P.wrongQs||[]).slice(0,8)}; }
+      dailyTaskDone(task, Math.max(0,firstTry), total, P.body, P.mode!=='review'&&P.retry?`다시 풀어 맞힌 ${P.retry}개`:'');
+      return true;
+    }
+    // 일반 퀴즈/심화로 오늘의 단원을 깨도 과제로 인정 (많이 모드는 퀴즈+심화 둘 다)
+    if(P.mode==='master'&&!P.think){ const t=D.tasks.find(t=>t.id==='unit'&&t.unit===P.unitId&&!t.done); if(t){ if(!P.deep){ t.quizDone=true; t.correct=P.total-Math.min(P.retry,P.total); t.total=P.total; } if(t.deep? (t.quizDone&&P.deep) : !P.deep){ markDone(t,t.correct||P.total-Math.min(P.retry,P.total),t.total||P.total); dailyCheckAll(); } saveDB(); } }
+    return false;
+  };
+  /* 과제 하나 끝났을 때 공통 결과 화면 */
+  window.dailyTaskDone=function(task, firstTry, total, body, extra){
+      const D=todayTask(); if(!D) return;
+      markDone(task,firstTry,total); logEvent(task.unit||'daily','daily',1);
       const all=dailyCheckAll(); const newCards=checkCardUnlocks(); saveDB(); syncSoon();
       confetti(all); sfx('win'); idolPopup(all?'오늘 과제 다 했다!! 이제 스티커 문이 열렸어 🏆':'과제 하나 끝! 잘했어 ✨', true);
       const left=D.tasks.filter(t=>!t.done); const accOk=total>0&&firstTry/total>=0.9;
-      P.body.innerHTML=`<div class="result card">
+      body.innerHTML=`<div class="result card">
         <div class="stars">${all?'🏆🎉':'✅'}</div>
         <h2>${task.title} 완료!</h2>
-        <div class="msg">${total}문제 중 처음에 바로 맞힌 문제 <b>${Math.max(0,firstTry)}개</b>${P.mode!=='review'&&P.retry?` · 다시 풀어 맞힌 ${P.retry}개`:''}${accOk?' · 🎯 정확도 90% 이상!':''}</div>
+        <div class="msg">${total}문제 중 처음에 바로 맞힌 문제 <b>${firstTry}개</b>${extra?` · ${extra}`:''}${accOk?' · 🎯 정확도 90% 이상!':''}</div>
         ${all?`<div class="reward-banner">${dailyRewardText(D)}</div><div class="tipbox" style="text-align:center">✨ 이제부터 더 푸는 건 전부 <b>보너스 스티커</b>! 문제은행·심화·다른 단원 도전해 봐.</div>`
              :`<div class="tipbox" style="text-align:center">📌 남은 과제 ${left.length}개를 다 끝내면 스티커를 받아요${accOk?' (정확도 보너스 +1 확보!)':''}</div>`}
         ${rewardCardHTML(newCards)}
         ${left.length?`<p style="margin-top:12px">남은 과제 ${left.length}개: ${left.map(t=>t.title).join(', ')}</p><button class="bigbtn" onclick="startDaily('${left[0].id}')">▶ 다음 과제 ${left[0].title}</button>`:`<p style="margin-top:12px">오늘 과제 끝! 내일 또 만나 😊</p>`}
         <button class="bigbtn ghost" onclick="home()">🏠 홈으로</button></div>`;
-      return true;
-    }
-    // 일반 퀴즈로 오늘의 단원을 깨도 과제로 인정
-    if(P.mode==='master'&&!P.think&&!P.deep){ const t=D.tasks.find(t=>t.id==='unit'&&t.unit===P.unitId&&!t.done); if(t){ markDone(t,P.total-Math.min(P.retry,P.total),P.total); dailyCheckAll(); saveDB(); } }
-    return false;
   };
 
   /* ---------- 홈 카드 ---------- */
   window.dailyCardHTML=function(){
     const D=ensureDaily(); if(!D) return `<div class="card" style="text-align:center;color:var(--soft)">🎯 오늘 과제는 아이가 앱을 열면 만들어져요.</div>`;
+    syncHwTasks(D);
     const done=D.tasks.filter(t=>t.done).length, n=D.tasks.length, pct=Math.round(done/n*100);
     const streak=dailyStreak();
     const rows=D.tasks.map(t=>`<div class="cat-row" style="display:flex;align-items:center;gap:8px;padding:6px 0">
