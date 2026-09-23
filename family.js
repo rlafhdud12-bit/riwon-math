@@ -34,10 +34,13 @@
   window.checkFamily=async function(){
     if(!navigator.onLine) return false;
     try{ const j=await (await fetch(API()+'/api/family?id='+encodeURIComponent(lid())+'&since='+(DB.famRead||0))).json();
+      learnLabel(j.msgs);
       const n=(j.msgs||[]).filter(m=>m.from!==role()).length; const changed=n!==(DB.famUnread||0); DB.famUnread=n; saveDB(); return changed; }catch(e){ return false; }
   };
+  // 아이 폰은 부모가 고른 호칭(아빠/엄마)을 모른다 → 부모가 보낸 마지막 메시지의 이름으로 배운다
+  function learnLabel(msgs){ if(DB.viewer) return; const p=(msgs||[]).filter(m=>m.from==='parent'&&m.name).pop(); if(p&&p.name!==DB.parentLabel){ DB.parentLabel=p.name; saveDB(); } }
   window.openFamily=async function(){
-    clearTimers();
+    if(document.getElementById('family')){ famPull(); return; } // 이미 열려 있으면(알림을 또 누름) 새 메시지만
     FAM={msgs:[], last:0, busy:false};
     const el=document.createElement('div'); el.className='chat-wrap'; el.id='family'; document.body.appendChild(el);
     const other=DB.viewer?(DB.name||'아이'):famLabel();
@@ -49,12 +52,13 @@
     await famPull(true);
     famTimer=setInterval(()=>{ if(!document.hidden) famPull(); },4000);
   };
-  window.closeFamily=function(){ clearInterval(famTimer); famTimer=null; const el=document.getElementById('family'); if(el) el.remove(); FAM=null; DB.famUnread=0; saveDB(); home(); };
+  window.closeFamily=function(){ clearInterval(famTimer); famTimer=null; const el=document.getElementById('family'); if(el) el.remove(); FAM=null; DB.famUnread=0; saveDB(); if(!PLAY&&!curUnit) home(); }; // 문제 풀다 알림으로 들어왔으면 풀던 화면으로 돌아감
   async function famPull(first){
     if(!FAM) return;
     try{ const j=await (await fetch(API()+'/api/family?id='+encodeURIComponent(lid())+'&since='+(first?0:FAM.last))).json();
       const log=document.getElementById('fam-log'); if(!log||!FAM) return;
       if(first){ log.innerHTML=(j.msgs||[]).length?'':`<div class="msg sys">아직 주고받은 말이 없어요. 첫 인사를 해 볼까요? 😊</div>`; }
+      learnLabel(j.msgs);
       (j.msgs||[]).forEach(m=>{ if(m.t<=FAM.last) return; FAM.last=m.t; famBubble(m); });
       if(FAM.last){ DB.famRead=FAM.last; DB.famUnread=0; saveDB(); }
     }catch(e){ if(first){ const log=document.getElementById('fam-log'); if(log) log.innerHTML='<div class="msg sys">인터넷 연결을 확인해 주세요.</div>'; } }
@@ -111,6 +115,13 @@
       fetch(API()+'/api/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test',id:lid(),role:role()})}).catch(()=>{});
       alert('알림이 켜졌어요! 시험 알림이 곧 와요 🔔'); return true;
     }catch(e){ alert('알림을 켜지 못했어요: '+e.message); return false; }
+  };
+  // 켜 둔 폰은 하루 한 번 조용히 다시 등록(폰이 구독 주소를 바꾸면 서버가 옛 주소를 지워 알림이 끊기는 것 방지)
+  window.resyncPush=async function(){
+    if(!DB.pushOn||!pushSupported()||Notification.permission!=='granted'||DB.pushSync===todayKey()) return;
+    try{ const reg=await navigator.serviceWorker.ready; let sub=await reg.pushManager.getSubscription(); if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u8(VAPID)});
+      const r=await fetch(API()+'/api/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'subscribe',id:lid(),role:role(),sub:sub.toJSON()})});
+      if(r.ok){ DB.pushOn=role(); DB.pushSync=todayKey(); saveDB(); } }catch(e){}
   };
   window.notifBarHTML=function(){
     const s=pushStatus(); if(s==='on'||s==='unsupported'||DB.notifBarHide===todayKey()) return '';
@@ -170,5 +181,13 @@
     if(h==='#family') openFamily();
     else if(h==='#report'&&DB.viewer&&typeof fetchReports==='function') fetchReports().then(()=>renderReport(0));
   };
-  if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.hash){ location.hash=e.data.hash; routeHash(); } });
+  if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data&&e.data.hash){ location.hash=e.data.hash; routeHash(); return; }
+    // 앱을 켜 둔 채 알림이 오면 화면도 바로 갱신(채팅 배지·카드·숙제)
+    if(e.data&&e.data.push){ const idle=()=>!PLAY&&!curUnit&&!document.getElementById('family');
+      if(document.getElementById('family')) famPull();
+      else checkFamily().then(ch=>{ if(ch&&idle()) home(); });
+      if(!DB.viewer){ if(typeof fetchCheer==='function') fetchCheer(); if(typeof fetchHomework==='function') fetchHomework().then(ok=>{ if(ok&&idle()) home(); }); }
+      else if(typeof pullNow==='function') pullNow(true).then(ok=>{ if(ok&&idle()) home(); }); }
+  });
 })();

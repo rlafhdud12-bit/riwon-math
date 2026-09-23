@@ -98,6 +98,7 @@
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
+      ${typeof paceSummaryHTML==='function'?paceSummaryHTML():''}
       <details class="more"><summary>더 보기 — 최근 7일 · 단원별 정답률</summary>
         <div class="card" style="margin-top:8px"><h3>📅 최근 7일</h3>${weekChart()}</div>
         <div class="card">${unitRowsHTML()}</div></details>

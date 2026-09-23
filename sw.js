@@ -55,10 +55,14 @@ self.addEventListener('fetch', e => {
 /* 🔔 웹 푸시(2026-09-24): 서버가 보낸 알림을 앱이 꺼져 있어도 표시하고, 누르면 앱을 연다 */
 self.addEventListener('push', e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.title || '공부노트', {
-    body: d.body || '', icon: 'icon-180.png', badge: 'icon-180.png', tag: d.tag || undefined, renotify: !!d.tag,
-    data: { url: d.url || './' }
-  }));
+  e.waitUntil(Promise.all([
+    self.registration.showNotification(d.title || '공부노트', {
+      body: d.body || '', icon: 'icon-180.png', badge: 'icon-180.png', tag: d.tag || undefined, renotify: !!d.tag,
+      data: { url: d.url || './' }
+    }),
+    // 앱이 열려 있으면 화면도 바로 새로 고치게 알려 준다
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => ws.forEach(w => w.postMessage({ push: d.tag || 'push' })))
+  ]));
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();

@@ -346,7 +346,8 @@ async function syncNow(){
   if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
-    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; // 이름은 폰에만 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
+    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; // 이름은 폰에만
+    ['pushOn','pushSync','famRead','famUnread','parentLabel','remind','remindCounts','notifBarHide'].forEach(k=>delete db[k]); // 기기 전용 상태 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
     db.hw={done:(DB.hw&&DB.hw.done)||{}}; // 숙제 문제 본문(시계 그림 등)은 크니 결과만
     db.catalog=UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]).map(u=>({id:u.id,name:u.name,cats:(MODULES[u.id].gens||[]).map(g=>g.cat)})); // 리포트 분석용 유형 목록
     const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
@@ -488,7 +489,9 @@ async function pullNow(force){
     const r=await fetch(TUTOR_API+'/api/record?id='+encodeURIComponent(DB.lid)); if(!r.ok){ pullBusy=false; return false; }
     const j=await r.json(); if(!j.db){ pullBusy=false; return false; }
     // 부모 폰 자체 설정(PIN·잠금·소리·가족카드·학년)은 유지하고, 학습 기록만 아이 것으로 바꾼다
-    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, reports:DB.reports, reportSeen:DB.reportSeen, reportSub:DB.reportSub, reportJob:DB.reportJob, hwJobs:DB.hwJobs, name:DB.name||j.db.name, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
+    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, reports:DB.reports, reportSeen:DB.reportSeen, reportSub:DB.reportSub, reportJob:DB.reportJob, hwJobs:DB.hwJobs, name:DB.name||j.db.name,
+      // 이 폰(부모) 전용 알림·채팅 상태 — 아이 기록으로 덮으면 알림 켜짐·읽음 표시·호칭이 사라진다
+      pushOn:DB.pushOn, pushSync:DB.pushSync, famRead:DB.famRead, famUnread:DB.famUnread, parentLabel:DB.parentLabel, remind:DB.remind, remindCounts:DB.remindCounts, notifBarHide:DB.notifBarHide, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
     DB=Object.assign(j.db,keep); saveDB(); lastPull=Date.now(); pullBusy=false; return true;
   }catch(e){ pullBusy=false; return false; }
 }
@@ -3256,7 +3259,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="ui.js"></script>
 <script>
 home();
-if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) famTick(); }); }
+if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) famTick(); }); }
 if(typeof routeHash==='function') routeHash();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
 else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
