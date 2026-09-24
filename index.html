@@ -459,7 +459,7 @@ async function sendChat(preset){
 function askAboutCurrent(){
   const P=PLAY; if(!P||!P.cur) return openChat(null);
   const c=P.cur, u=UNITS.find(x=>x.id===P.unitId);
-  openChat({unit:u?u.name:'', stage:P.mode, q:c.q, a:c.choices?c.choices[c.a]:c.a, given:c.given, cat:c.cat, why:c.why||undefined});
+  openChat({unit:u?u.name:'', stage:P.mode, q:c.q, a:c.choices?c.choices[c.a]:c.a, given:c.given, cat:c.cat, why:c.why||undefined, work:c.work?[...(c.work.l||[]),c.work.col?`세로셈 ${c.work.col.a}${c.work.col.op}${c.work.col.b}: 답칸 ${c.work.col.r} 올림칸 ${c.work.col.h}`:''].filter(Boolean).join(' / '):undefined});
 }
 
 /* ===== 학년 잠금(부모 PIN) + 가족 코드(다른 폰에서 같은 기록 보기) ===== */
@@ -512,7 +512,7 @@ function addWrong(c){
   if(e){ e.miss++; if(c.given!==undefined){ e.given=e.given||[]; e.given.push(c.given); } }
   else DB.wrong.push({key, unitId:c.unitId, cat:c.cat, q:c.q, a:c.a, hint:c.hint, visual:c.visual||null, choices:c.choices||null, miss:1, given:c.given!==undefined?[c.given]:[], t:Date.now()});
   // 오답 원인 분석용 기록(문제·정답·아이가 쓴 답). 최근 300개만.
-  DB.miss=DB.miss||[]; DB.miss.unshift({t:Date.now(), u:c.unitId, cat:c.cat, q:String(c.q).replace(/<[^>]+>/g,''), a:c.choices?c.choices[c.a]:c.a, g:c.given, tk:c.t?c.t.k:null, why:c.why||null});
+  DB.miss=DB.miss||[]; DB.miss.unshift({t:Date.now(), u:c.unitId, cat:c.cat, q:String(c.q).replace(/<[^>]+>/g,''), a:c.choices?c.choices[c.a]:c.a, g:c.given, tk:c.t?c.t.k:null, why:c.why||null, w:c.work||undefined});
   if(DB.miss.length>300) DB.miss.length=300;
 }
 function removeFromWrong(c){
@@ -771,6 +771,7 @@ function renderCard(){
       ${c.fromWrong?'<span class="q-retry">📘 복습 문제</span><br>':''}
       ${c.visual?`<div class="q-visual">${c.visual}</div>`:''}
       <div class="q-text">${c.q}</div>
+      <div id="work"></div>
       ${isC?`<div class="choice-grid">${c.choices.map((ch,i)=>`<button class="choice-btn" id="ch${i}" onclick="choosePick(${i})">${ch}</button>`).join('')}</div>`
            :`<div class="ans-box empty" id="ans">?</div>`}
       <div class="feedback" id="fb"></div>
@@ -784,11 +785,13 @@ function renderCard(){
         <button class="key" onclick="press('0')">0</button>
         <button class="key ok" onclick="press('ok')">확인</button>
       </div>`}
-      ${typeof padButton==='function'?padButton():''}
+      ${typeof padButton==='function'&&!(typeof workEligible==='function'&&workEligible(c))?padButton():''}
     </div>`;
+  if(typeof workMount==='function') workMount(P); // ✍️ 식 쓰며 풀기
 }
 function press(k){
   const P=PLAY; if(!P||!P.cur||P.locked||P.helping)return; const ans=$('#ans');
+  if(typeof workKey==='function'&&workKey(k)) return; // ✍️ 식 노트에 쓰는 중
   if(P.pausing&&k!=='ok'&&typeof paceEdit==='function') paceEdit(P,k!=='del'); // 🐢 멈춘 뒤 다시 입력
   if(k==='del') P.buf=P.buf.slice(0,-1);
   else if(k==='ok') return submit();
@@ -801,10 +804,13 @@ function choosePick(i){
   P.buf=String(i); submit();
 }
 function submit(){
-  const P=PLAY; if(!P||!P.cur||P.locked||P.helping||P.buf==='')return;
+  const P=PLAY; if(!P||!P.cur||P.locked||P.helping)return;
+  if(typeof workBeforeSubmit==='function'&&!workBeforeSubmit(P)) return; // 식 필수·식의 답 넣기
+  if(P.buf==='')return;
   if(typeof paceCheck==='function'&&paceCheck(P)) return; // 너무 빠르면 채점 전에 한 번 멈춤
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
+  c.work=typeof workCollect==='function'?workCollect(P,c,ok):undefined; // ✍️ 아이가 쓴 식(오답 원인 추론용)
   markStat(c.unitId||P.unitId,c.cat,ok); // 과제(여러 단원 섞임)는 문제의 단원으로 기록
   if(typeof paceRecord==='function') paceRecord(P,ok);
   const ansEl=$('#ans');
@@ -813,6 +819,7 @@ function submit(){
   if(ok){
     P.locked=true; P.streak++; P.corr++; confetti(false); sfx('ok');
     fb.className='feedback ok'; fb.textContent='정답이에요! 🎉'; if(ansEl)ansEl.style.borderColor='#19a974';
+    if(typeof workFeedback==='function') workFeedback(c,fb,true);
     if(P.mode==='master'){ P.solved.add(c.id); P.score+=c.retry?3:5; }
     else if(P.mode==='bank'){ P.score+=10; P.count++; }
     else { removeFromWrong(c); P.score+=5; P.fixed++; }
@@ -822,11 +829,12 @@ function submit(){
     else if([3,5,8,10,15,20].indexOf(P.streak)>=0){ idolPopup(pick(LINES.streak).replace('{n}',P.streak)); lastPopupAt=P.corr; }
     else if(P.corr-lastPopupAt>=5 && Math.random()<0.6){ idolPopup(pick(LINES.praise)); lastPopupAt=P.corr; }
     saveDB();
-    later(advance,1000);
+    later(advance,c.work?2200:1000); // 식으로 풀었으면 ✓ 표시를 볼 시간
   } else {
     P.locked=true; P.awaitNext=true; P.streak=0; sfx('no');
     c.why=diagnose(c,c.given);
     fb.className='feedback no'; fb.innerHTML='앗! 정답은 '+ansShow(c)+' 예요.'+(c.why?`<div style="margin-top:6px;font-size:14.5px;color:#7a4a1e">🔍 ${c.why}</div>`:' 왜 그런지 천천히 살펴보자 👀'); if(ansEl)ansEl.style.borderColor='#e8503a';
+    if(typeof workFeedback==='function') workFeedback(c,fb,false);
     $('#hint').classList.add('show');
     if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); if(P.wrongQs&&!c.retry) P.wrongQs.push(String(c.q).replace(/<[^>]+>/g,'').slice(0,40)); }
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
@@ -3257,10 +3265,11 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="expr.js"></script>
 <script src="coach.js"></script>
 <script src="family.js"></script>
+<script src="work.js"></script>
 <script src="ui.js"></script>
 <script>
 home();
-if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) famTick(); }); }
+if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }
 if(typeof routeHash==='function') routeHash();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
 else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }

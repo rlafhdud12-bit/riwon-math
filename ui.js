@@ -54,6 +54,7 @@
       <div class="topbar"><button class="back" onclick="home()">←</button><div class="t">📊 공부 기록</div><div class="spacer"></div><button class="mini" onclick="renderSettings()">🔧 부모 설정</button></div>
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
       ${whyCardHTML(5)}
+      ${typeof workSummaryHTML==='function'?workSummaryHTML():''}
       ${typeof paceSummaryHTML==='function'?paceSummaryHTML():''}
       <div class="card"><h3>📅 최근 7일</h3>${weekChart()}</div>
       <details class="more"><summary>단원별 정답률</summary><div class="card" style="margin-top:8px">${unitRowsHTML()}</div></details>
@@ -71,6 +72,7 @@
         <div class="setrow"><div class="k">📚 과제 양<small>보통 ≈25분 · 많이 ≈40분(퀴즈+심화)</small></div><div style="display:flex;gap:6px">${pill((DB.dailyLevel||'normal')==='normal','보통',"DB.dailyLevel='normal';saveDB();renderSettings(true)")}${pill(DB.dailyLevel==='more','많이',"DB.dailyLevel='more';saveDB();renderSettings(true)")}</div></div>
         <div class="setrow"><div class="k">👨‍👩‍👧 가족 코드<small>부모 폰에서 이 코드를 넣으면 같은 기록이 보여요</small></div><button class="wpill" onclick="showFamilyCode()">보기</button></div>
         ${typeof remindSettingHTML==='function'?remindSettingHTML():''}
+        ${typeof workModeSettingHTML==='function'?workModeSettingHTML():''}
       </div>
       <div class="card"><h3>🔒 학년</h3><p class="dim">잠긴 학년은 PIN 없이 못 들어가요. 열린 학년이 둘 이상이면 홈에 선택 칩이 생겨요.</p>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${[1,2,3,4,5,6].map(n=>`<button class="wpill" style="${isLocked(n)?'opacity:.5':'border-color:var(--c);color:var(--c-dark)'}" onclick="DB.locked=DB.locked||{};DB.locked[${n}]=!DB.locked[${n}];if(DB.locked[${n}]&&DB.grade===${n})DB.grade=3;saveDB();renderSettings(true)">${isLocked(n)?'🔒':'🔓'} ${n}학년</button>`).join('')}</div></div>
@@ -97,7 +99,9 @@
       ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}
+      ${typeof workInsightHTML==='function'?workInsightHTML(4):''}
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
+      ${typeof workSummaryHTML==='function'?workSummaryHTML():''}
       ${typeof paceSummaryHTML==='function'?paceSummaryHTML():''}
       <details class="more"><summary>더 보기 — 최근 7일 · 단원별 정답률</summary>
         <div class="card" style="margin-top:8px"><h3>📅 최근 7일</h3>${weekChart()}</div>
@@ -107,6 +111,7 @@
           <div class="setrow"><div class="k">👧 아이 이름<small>이 폰 제목 표시용</small></div><button class="wpill" onclick="setChildName()">${DB.name?'바꾸기':'넣기'}</button></div>
           <div class="setrow"><div class="k">🙋 채팅에서 내 이름</div><div style="display:flex;gap:6px">${['아빠','엄마'].map(f=>`<button class="wpill" style="${(DB.parentLabel||'아빠')===f?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="DB.parentLabel='${f}';saveDB();home()">${f}</button>`).join('')}</div></div>
           ${typeof remindSettingHTML==='function'?remindSettingHTML():''}
+          ${typeof workModeSettingHTML==='function'?workModeSettingHTML():''}
           <div class="setrow"><div class="k">가족 코드<small>${DB.lid}</small></div><button class="wpill" onclick="leaveViewer()">함께 보기 끄기</button></div>
         </div></details>`;
   };

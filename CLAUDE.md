@@ -26,6 +26,7 @@
 - **플레이 엔진**: `startMaster`(퀴즈/think/deep), `startBank`(약점 유형 가중), `startReview`. 오답 시 `c.given`에 **아이가 쓴 답** 저장 → `addWrong()`이 `DB.wrong[].given[]`·`DB.miss[]`(최근 300개 오답 로그: 문제·정답·아이 답·유형키 `tk`)에 기록. **이게 오답 원인 분석의 원천 데이터.**
 - **튜터(도와주세요)**: `TUTOR[k]` 유형별 대본(mul·mulTens·mul2·div*·frac*·conv·compound·unitOp). 없는 유형은 힌트+정답 폴백. 덧셈뺄셈·도형·원·소수·그래프는 아직 대본 없음.
 - **과외 모듈**(`saveDB` 아래): `learnerId()`(기기 익명 ID `DB.lid`), `syncSoon/syncNow`, `openChat(ctx)/sendChat`, `askAboutCurrent()`(오답 화면의 "선생님, 왜 틀렸어?"). 채팅은 `TUTOR_API` 상수.
+- **✍️ 식 쓰며 풀기**(`work.js`, 2026-09-24): 문제 카드의 `#work` 에 식 노트(한 줄에 계산 하나)·세로셈 칸. 엔진 훅 `workMount/workKey/workBeforeSubmit/workCollect/workFeedback`. 아이가 쓴 식은 `c.work` → `DB.miss[].w`·`DB.workLog`·`DB.workStat` → 리포트·튜터가 읽음. 모드 `workModeNow()`(서버 settings.workMode 우선: free/auto/must).
 - **저장**: localStorage `riwon_math_v2`. 스키마 `freshDB()`, 마이그레이션 `loadDB()`.
 
 ## 검증 (필수, push 전)
