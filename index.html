@@ -347,7 +347,7 @@ async function syncNow(){
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
     const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; // 이름은 폰에만
-    ['pushOn','pushSync','devId','parentNames','famRead','famUnread','parentLabel','remind','remindCounts','notifBarHide'].forEach(k=>delete db[k]); // 기기 전용 상태 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
+    ['pin','pinLock','pushOn','pushSync','devId','parentNames','famRead','famUnread','parentLabel','remind','remindCounts','notifBarHide'].forEach(k=>delete db[k]); // 기기 전용 상태 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
     db.hw={done:(DB.hw&&DB.hw.done)||{}}; // 숙제 문제 본문(시계 그림 등)은 크니 결과만
     db.catalog=UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]).map(u=>({id:u.id,name:u.name,cats:(MODULES[u.id].gens||[]).map(g=>g.cat)})); // 리포트 분석용 유형 목록
     const r=await fetch(TUTOR_API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),v:'v3',db})});
@@ -465,7 +465,13 @@ function askAboutCurrent(){
 /* ===== 학년 잠금(부모 PIN) + 가족 코드(다른 폰에서 같은 기록 보기) ===== */
 function parentOK(){
   if(!DB.pin){ const p=prompt('부모 확인용 숫자 4자리를 정해 주세요. (학년 잠금·설정을 바꿀 때 씁니다)'); if(!p||!/^\d{4}$/.test(p)){ alert('숫자 4자리로 정해 주세요.'); return false; } DB.pin=p; saveDB(); alert('설정했어요! 잊지 마세요 🙂'); return true; }
-  const p=prompt('부모 확인 숫자 4자리'); if(p===DB.pin) return true; if(p!==null) alert('숫자가 달라요.'); return false;
+  const L=DB.pinLock||{n:0,until:0};
+  if(Date.now()<L.until){ alert(`부모 확인 숫자를 여러 번 틀려서 ${Math.ceil((L.until-Date.now())/60000)}분 동안 잠겨 있어요.`); return false; }
+  const p=prompt('부모 확인 숫자 4자리'); if(p===null) return false;
+  if(p===DB.pin){ DB.pinLock={n:0,until:0}; saveDB(); return true; }
+  L.n=(L.n||0)+1; if(L.n%3===0) L.until=Date.now()+Math.min(60,5*Math.pow(2,L.n/3-1))*60000;
+  DB.pinLock=L; DB.pinBad={n:((DB.pinBad&&DB.pinBad.n)||0)+1, t:Date.now()}; saveDB(); // 틀린 시도는 부모 화면에 보임
+  alert(L.until>Date.now()?'여러 번 틀려서 잠시 잠겼어요.':'숫자가 달라요.'); return false;
 }
 function isLocked(n){ return !!(DB.locked&&DB.locked[n]); }
 function tryGrade(n){
@@ -713,6 +719,13 @@ function gameTab(i){
 
 /* ===================== 문제 생성 ===================== */
 function genOne(unitId,g){ const o=g.make(); o.cat=g.cat; o.unitId=unitId; return o; }
+// 틀린 문제를 다시 풀 땐 같은 유형의 새 숫자 문제로(방금 본 정답을 외워서 쓰면 이해 확인이 안 됨). 만들 수 없으면(사진 숙제 등) null
+function siblingOf(c){
+  const m=MODULES[c.unitId]; if(!m||c.hw) return null;
+  const g=[...(m.gens||[]),...(m.thinkGens||[]),...(m.deepGens||[])].find(x=>x.cat===c.cat); if(!g) return null;
+  for(let k=0;k<8;k++){ try{ const o=genOne(c.unitId,g); if(o.q!==c.q&&String(o.a)!==String(c.a)) return o; }catch(e){ return null; } }
+  return null;
+}
 function pickGen(unitId){
   const gens=MODULES[unitId].gens, st=unitDB(unitId).cats;
   const w=gens.map(g=>1+2*((st[g.cat]&&st[g.cat].wrong)||0));
@@ -767,7 +780,7 @@ function renderCard(){
   const isC=!!c.choices;
   P.body.innerHTML=header+`
     <div class="q-card">
-      ${c.retry?'<span class="q-retry">🔁 다시 도전!</span><br>':''}
+      ${c.retry?`<span class="q-retry">🔁 다시 도전!${c.sib?' 같은 유형, 숫자만 바뀌었어':''}</span><br>`:''}
       ${c.fromWrong?'<span class="q-retry">📘 복습 문제</span><br>':''}
       ${c.visual?`<div class="q-visual">${c.visual}</div>`:''}
       <div class="q-text">${c.q}</div>
@@ -836,7 +849,7 @@ function submit(){
     fb.className='feedback no'; fb.innerHTML='앗! 정답은 '+ansShow(c)+' 예요.'+(c.why?`<div style="margin-top:6px;font-size:14.5px;color:#7a4a1e">🔍 ${c.why}</div>`:' 왜 그런지 천천히 살펴보자 👀'); if(ansEl)ansEl.style.borderColor='#e8503a';
     if(typeof workFeedback==='function') workFeedback(c,fb,false);
     $('#hint').classList.add('show');
-    if(P.mode==='master'){ P.retry++; P.queue.push(Object.assign({},c,{retry:true})); addWrong(c); if(P.wrongQs&&!c.retry) P.wrongQs.push(String(c.q).replace(/<[^>]+>/g,'').slice(0,40)); }
+    if(P.mode==='master'){ P.retry++; const sib=siblingOf(c); P.queue.push(Object.assign(sib||Object.assign({},c),{retry:true,sib:!!sib,id:c.id})); addWrong(c); if(P.wrongQs&&!c.retry) P.wrongQs.push(String(c.q).replace(/<[^>]+>/g,'').slice(0,40)); }
     else if(P.mode==='bank'){ P.count++; P.wrongCount++; addWrong(c); }
     else { const e=DB.wrong.find(w=>w.key===c.key); if(e)e.miss++; P.queue.push(c); }
     saveDB();
@@ -3269,7 +3282,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="ui.js"></script>
 <script>
 home();
-if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }
+if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); if(typeof presenceStart==='function'){ presenceStart(); presenceWatch(); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }
 if(typeof routeHash==='function') routeHash();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
 else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }

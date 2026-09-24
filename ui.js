@@ -93,6 +93,7 @@
       <div class="hbar"><div class="htitle">${appTitle()} <span class="dim">· 부모</span></div>
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
       ${typeof notifBarHTML==='function'?notifBarHTML():''}
+      ${typeof presenceHTML==='function'?presenceHTML():''}
       <div class="row3"><button class="pri" onclick="openFamily()">💬 ${DB.name?nameI(DB.name):'아이'}와 채팅${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button style="background:#e056a0;border-color:#e056a0;color:#fff" onclick="renderGallery()">💌 응원 카드</button><button onclick="openChat(null)">🤖 선생님</button></div>
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
       ${typeof parentReportHTML==='function'?parentReportHTML():''}

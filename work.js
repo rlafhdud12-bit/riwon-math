@@ -63,7 +63,8 @@
   // 숫자 뒤 조사: 끝자리 읽기에 받침이 있으면(영·일·삼·육·칠·팔 / 십·백·천) 을·은·이
   const J=(n,a,b)=>String(n)+('013678'.includes(String(n).slice(-1))?a:b);
   const place=k=>['일','십','백','천','만'][k]+'의 자리';
-  window.workModeNow=()=>(DB.remind&&DB.remind.workMode)||DB.workMode||'auto';
+  // 기본 = 필수(2026-09-24 대표 결정). 서버 설정이 우선 — 부모 폰에서만 바꾼다
+  window.workModeNow=()=>(DB.remind&&DB.remind.workMode)||'must';
   // 계산이 필요한 문제 = 두 자리 이상 수가 나오는 문제(구구단 한 자리 곱은 암기라 제외)
   const eligible=c=>/\d{2,}/.test(plainQ(c));
   window.workEligible=eligible;
@@ -244,10 +245,45 @@
   }
 
   /* ---------- 제출 전·후 (엔진 submit 이 부름) ---------- */
+  /* ---------- 🛡 대충 쓰기 막기 (식 필수일 때) ----------
+     초등학생이 찾을 만한 우회로: 답만 쓰기("34") · 아무 식("1+1=2") · 식은 쓰고 답은 암산으로 따로 · "17×2=?" 처럼 = 뒤를 비우기
+     · 틀린 뒤 보여 준 정답을 외워 한 줄로 쓰기 → 아래 규칙으로 막는다(틀린 식은 막지 않는다 — 틀려도 생각이 보이면 된다) */
+  // 식에 써도 되는 "문제와 관련된 수" = 문제의 수 그대로 + 자릿값으로 쪼갠 수(17 → 10, 7) + 단위 환산 수(60·10·100·1000)
+  // (17의 '1'처럼 맨 앞 숫자 하나만은 안 됨 → "1+1=2" 같은 아무 식이 통과하지 않게)
+  const FACTORS=[10,100,1000,60];
+  function seeds(c){ const s=new Set(FACTORS.map(String)); (plainQ(c).match(/\d+/g)||[]).forEach(n=>{ const d=String(+n); s.add(d); for(let i=0;i<d.length;i++){ const p=+d[i]*Math.pow(10,d.length-1-i); if(p) s.add(String(p)); } }); return s; }
+  // 제대로 된 식 한 줄 = 첫 = 앞에 기호가 있고, = 뒤에 숫자가 있음 (예: 10×2=20)
+  const validLine=s=>{ const p=s.split('='); return p.length>=2&&/[+−×÷]/.test(p[0])&&/\d/.test(p[0])&&/^\d+$/.test(p[p.length-1].trim()); };
+  const leftNums=s=>(s.split('=')[0].match(/\d+/g)||[]).map(n=>String(+n));
+  function workCheck(P){
+    const c=W.c, S=seeds(c), lines=W.lines.map(s=>s.trim()).filter(Boolean);
+    const good=lines.filter(validLine), related=good.filter(s=>leftNums(s).some(n=>S.has(n)));
+    const E=W.col?colExpect(W.col):null, colFull=!!W.col&&E&&E.R.every((d,i)=>d===''||W.col.r[i]!=='');
+    if(!related.length&&!colFull){
+      if(lines.length&&!good.length) return '✍️ 식은 "수 기호 수 = 답"처럼 써 줘. 예) 문제의 수로 □ + □ = □';
+      if(good.length) return '✍️ 문제에 나온 수로 식을 세워 줘! 문제와 상관없는 식은 안 돼';
+      return W.col&&W.tab==='col'?'🧮 세로셈 답 칸을 끝까지 채워 줘':'✍️ 먼저 식을 한 줄 써 줘! 어떻게 계산할지 적으면 실수가 줄어';
+    }
+    // 틀렸던 유형을 다시 풀 땐 한 단계씩(두 줄 이상 또는 세로셈)
+    if((c.retry||c.fromWrong)&&related.length<2&&!colFull) return '✍️ 틀렸던 문제는 한 번에 말고 <b>한 단계씩</b> 두 줄 이상 써 줘 (또는 🧮 세로셈)';
+    // 답은 식에서 나와야 한다
+    const results=new Set([...good.map(s=>{ const p=s.split('='); return String(+p[p.length-1].trim()); }), ...(colFull&&colResult()?[String(+colResult())]:[])]);
+    if(!c.choices){ const a=P.buf===''?null:String(+P.buf);
+      // 식의 결과를 이어 붙인 답(7×2=14, 1×2=2 → 214)은 아이의 실제 생각이라 받는다 — 그래야 오개념이 기록된다. 암산 답은 안 받음
+      const rs=[...results], glued=rs.some(x=>rs.some(y=>x!==y&&(x+y===a))) ;
+      if(a!=null&&!results.has(a)&&!glued) return `✍️ 답 ${J(a,'이','가')} 식에 없어! 식의 마지막 줄이 답이 되게 써 줘`; }
+    else { const txt=String(c.choices[+P.buf]??''); const nums=txt.match(/\d+/g); const all=new Set([...results, ...good.flatMap(leftNums)]);
+      if(nums&&!nums.some(n=>all.has(String(+n)))) return '✍️ 고른 답이 식과 이어지지 않아. 식으로 계산한 수로 골라 줘'; }
+    return '';
+  }
   window.workBeforeSubmit=function(P){
     if(!W||W.c!==P.cur||W.done) return true;
-    if(W.required&&!hasWork()){ W.open=true; W.target='note'; draw(); const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.textContent='✍️ 먼저 식을 한 줄 써 줘! 어떻게 계산할지 적으면 실수가 줄어'; } return false; }
-    if(P.buf===''&&!W.c.choices&&W.open){ const r=W.tab==='col'?colResult():lastResult(); if(r!=null) P.buf=String(r); }
+    const typed=P.buf!=='';
+    if(!typed&&!W.c.choices&&W.open){ const r=W.tab==='col'?colResult():lastResult(); if(r!=null) P.buf=String(r); }
+    if(W.required){ const why=workCheck(P);
+      if(why){ if(!typed||W.c.choices) P.buf=''; W.open=true; W.target='note'; draw();
+        const s=DB.workStat=DB.workStat||{}; s.rej=(s.rej||0)+1; saveDB(); // 막힌 횟수(부모 화면·리포트)
+        const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.innerHTML=why; } return false; } }
     return true;
   };
   window.workCollect=function(P,c,ok){
@@ -281,7 +317,7 @@
     return `<div class="card"><h3>✍️ 식 쓰고 풀기 vs 암산</h3><div class="dash-grid">
       <div class="dash-stat"><div class="v">${pc(w)}</div><div class="k">식 쓰고 푼 문제 (${w.n})</div></div>
       <div class="dash-stat"><div class="v">${pc(n)}</div><div class="k">암산으로 푼 문제 (${n.n})</div></div></div>
-      <p class="dim" style="margin-top:6px">계산이 필요한 문제만 셌어요.</p></div>`;
+      <p class="dim" style="margin-top:6px">계산이 필요한 문제만 셌어요.${s.rej?` · 식 없이(또는 대충) 내려다 막힌 횟수 <b>${s.rej}</b>`:''}</p></div>`;
   };
   const DXN={calc:'식 안 계산 실수',place:'자릿값 놓침(십을 1로)',copy:'답 옮겨 쓰기 실수',plan:'식 세우기 오류',concat:'자릿값 무시(붙여 쓰기)',carryAdd:'올린 수 안 더함',noCarry:'올림 안 함',reverseSub:'거꾸로 빼기',borrowNoDec:'빌려 준 자리 안 줄임',digit:'자리 계산 실수',none:'식으로는 원인 불명'};
   window.workInsightHTML=function(limit){
@@ -295,11 +331,14 @@
   };
   // 부모·아이 폰 공통 설정(서버 settings.workMode 로 두 폰이 같이 씀)
   window.workModeSettingHTML=function(){
-    const m=workModeNow(); const b=(v,l)=>`<button class="wpill" style="${m===v?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="saveWorkMode('${v}')">${l}</button>`;
-    return `<div class="setrow"><div class="k">✍️ 식 쓰기<small>권장: 계산 문제면 식 노트가 열려 있고, 틀린 문제를 다시 풀 땐 식 필수 · 필수: 계산 문제는 식을 써야 답을 냄</small></div><div style="display:flex;gap:6px">${b('free','자유')}${b('auto','권장')}${b('must','필수')}</div></div>`;
+    const m=workModeNow(), N={free:'자유',auto:'권장',must:'필수'};
+    // 아이 폰에선 보기만(아이가 PIN을 알아내도 식 쓰기를 끌 수 없게) — 바꾸기는 부모 폰에서
+    if(!DB.viewer) return `<div class="setrow"><div class="k">✍️ 식 쓰기: <b>${N[m]}</b><small>부모 폰(함께 보기)에서만 바꿀 수 있어요</small></div></div>`;
+    const b=(v,l)=>`<button class="wpill" style="${m===v?'border-color:var(--c);color:var(--c-dark)':'opacity:.55'}" onclick="saveWorkMode('${v}')">${l}</button>`;
+    return `<div class="setrow"><div class="k">✍️ 식 쓰기<small>필수: 계산 문제는 문제의 수로 세운 식을 써야 답을 냄(답은 식에서 나와야 함, 틀렸던 문제는 두 단계 이상) · 권장: 노트만 열어 둠 · 아이 폰은 앱을 열 때 반영</small></div><div style="display:flex;gap:6px">${b('free','자유')}${b('auto','권장')}${b('must','필수')}</div></div>`;
   };
   window.saveWorkMode=async function(m){
-    DB.workMode=m; DB.remind=Object.assign({},DB.remind||{remindAt:'17:00',enabled:false},{workMode:m}); saveDB();
+    if(!DB.viewer) return; DB.workMode=m; DB.remind=Object.assign({},DB.remind||{remindAt:'17:00',enabled:false},{workMode:m}); saveDB();
     try{ await fetch((window.HW_API||TUTOR_API)+'/api/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'settings',id:DB.viewer?DB.lid:learnerId(),workMode:m})}); }catch(e){}
     const t=document.querySelector('.topbar .t')?.textContent||''; if(t.includes('부모 설정')) renderSettings(true); else home();
   };

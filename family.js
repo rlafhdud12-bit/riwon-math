@@ -193,6 +193,65 @@
       ${r.n?`<p class="dim" style="margin-top:8px">멈춘 뒤 다시 보고 푼 문제 정답률 ${pc(r)} (${r.n}문제)</p>`:''}</div>`;
   };
 
+  /* ================= 👀 접속 상태 (아이 폰 → 부모 폰) =================
+     앱을 "보고 있는" 동안만 1분마다 신호(화면·마지막 입력 시각·오늘 푼 문제 수). 켜 놓기만 하고 안 푸는 것도 보이게 마지막 입력을 같이 보낸다. */
+  let lastInput=0, lastPing=0, lastScreen='', pingTimer=null;
+  function screenName(){
+    if(document.getElementById('family')) return '💬 가족 채팅';
+    if(document.getElementById('chat')) return '🤖 선생님 채팅';
+    if(document.querySelector('.iv-row,.iv-prob')) return '🎤 음성 인터뷰';
+    if(typeof PLAY!=='undefined'&&PLAY){ const u=(UNITS.find(x=>x.id===(PLAY.cur&&PLAY.cur.unitId||PLAY.unitId))||{}).name;
+      const kind=PLAY.hw?(PLAY.daily&&String(PLAY.daily).startsWith('quest:')?'🎁 퀘스트':'📸 사진 숙제'):PLAY.daily?'🎯 오늘의 과제':'✏️ 문제 풀이';
+      return kind+(u&&!PLAY.hw?' · '+u:''); }
+    if(document.getElementById('ex-slot')) return '✍️ 식 세우기';
+    if(typeof curUnit!=='undefined'&&curUnit) return '📘 '+curUnit.name+' 단원';
+    const t=document.querySelector('.topbar .t'); return t?t.textContent.trim().slice(0,20):'🏠 홈';
+  }
+  function ping(state,beacon){
+    if(DB.viewer||!navigator.onLine) return; lastPing=Date.now(); lastScreen=screenName();
+    const d=(DB.days||{})[todayKey()]||{s:0,c:0};
+    const body=JSON.stringify({id:learnerId(), state, screen:lastScreen, lastInput, solved:d.s||0, correct:d.c||0});
+    try{ if(beacon&&navigator.sendBeacon){ navigator.sendBeacon(API()+'/api/presence', new Blob([body],{type:'text/plain'})); return; }
+      fetch(API()+'/api/presence',{method:'POST',headers:{'Content-Type':'text/plain'},body,keepalive:true}).catch(()=>{}); }catch(e){}
+  }
+  window.presenceStart=function(){
+    if(DB.viewer||pingTimer) return;
+    const mark=()=>{ lastInput=Date.now(); if(Date.now()-lastPing>20000&&screenName()!==lastScreen) ping('on'); }; // 화면이 바뀌면 조금 빨리 알림
+    document.addEventListener('pointerdown',mark,true); document.addEventListener('keydown',mark,true);
+    document.addEventListener('visibilitychange',()=>{ if(document.hidden) ping('off',true); else ping('on'); });
+    window.addEventListener('pagehide',()=>ping('off',true));
+    pingTimer=setInterval(()=>{ if(!document.hidden) ping('on'); },60000);
+    ping('on');
+  };
+  // 부모 폰: 상태 카드
+  let PRES=null, presTimer=null;
+  const ago=ms=>{ const m=Math.round(ms/60000); return m<1?'방금':m<60?m+'분 전':m<1440?Math.floor(m/60)+'시간 '+(m%60?m%60+'분 ':'')+'전':Math.floor(m/1440)+'일 전'; };
+  const clock=t=>{ const d=new Date(t), h=d.getHours(); return `${h<12?'오전':'오후'} ${h%12||12}:${String(d.getMinutes()).padStart(2,'0')}`; };
+  window.presenceHTML=function(){
+    if(!DB.viewer) return '';
+    const who=DB.name?nameI(DB.name):'아이';
+    if(!PRES) return `<div class="card" id="presence"><h3>👀 ${who} 지금</h3><p class="dim">불러오는 중…</p></div>`;
+    const L=PRES.last, now=PRES.now||Date.now(); let head='', sub='';
+    if(!L) head=`⚪ 아직 접속 기록이 없어요 <span class="dim">(아이 폰 앱이 새 버전이 되면 보여요)</span>`;
+    else { const since=now-L.t, idle=L.lastInput?now-L.lastInput:Infinity;
+      if(L.state==='on'&&since<150000){
+        if(idle<120000){ head=`🟢 <b>지금 공부 중</b>`; sub=`${L.screen} · 마지막 입력 ${ago(idle)}`; }
+        else { head=`🟡 <b>앱은 켜져 있는데 ${Math.round(idle/60000)}분째 입력이 없어요</b>`; sub=L.screen; } }
+      else { head=`⚪ 마지막 접속 <b>${ago(since)}</b>`; sub=`${new Date(L.t).toDateString()===new Date().toDateString()?'오늘':(new Date(L.t).getMonth()+1)+'/'+new Date(L.t).getDate()} ${clock(L.t)} · ${L.screen||''}`; } }
+    const T=PRES.today||{min:0,n:0,solved:0};
+    const days=(PRES.days||[]).slice(0,7).map(d=>`<div class="logrow"><span>${d.d.slice(5).replace('-','/')}</span><span>${d.min}분 · ${d.n}번 · 문제 ${d.solved}개</span></div>`).join('');
+    const pin=DB.pinBad&&DB.pinBad.n?`<p style="margin-top:6px;font-size:12.5px;color:#b7791f">🔐 아이 폰에서 부모 확인 숫자를 틀린 횟수 <b>${DB.pinBad.n}</b>번 (마지막 ${ago(Date.now()-DB.pinBad.t)})</p>`:'';
+    return `<div class="card" id="presence"><h3>👀 ${who} 지금</h3><div style="font-size:15.5px">${head}</div>${sub?`<div class="dim" style="margin-top:2px">${sub}</div>`:''}
+      <div style="margin-top:8px;font-size:14px">오늘 앱 사용 <b>${T.min}분</b> · ${T.n}번 들어옴 · 문제 ${T.solved}개</div>${pin}
+      ${days?`<details class="more"><summary>최근 7일 접속</summary>${days}</details>`:''}</div>`;
+  };
+  window.presenceFetch=async function(){
+    if(!DB.viewer||!navigator.onLine) return;
+    try{ const j=await (await fetch(API()+'/api/presence?id='+encodeURIComponent(DB.lid))).json(); if(j.ok){ PRES=j; const el=document.getElementById('presence'); if(el) el.outerHTML=presenceHTML(); } }catch(e){}
+  };
+  window.presenceWatch=function(){ if(!DB.viewer||presTimer) return; presenceFetch(); presTimer=setInterval(()=>{ if(!document.hidden&&document.getElementById('presence')) presenceFetch(); },30000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) presenceFetch(); }); };
+
   /* ================= 알림 눌러서 들어왔을 때 ================= */
   window.routeHash=function(){
     const h=location.hash; if(!h) return; history.replaceState(null,'',location.pathname+location.search);
