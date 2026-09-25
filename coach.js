@@ -57,7 +57,7 @@
   };
   let IV=null;
   window.startInterview=function(opt){
-    IV={body:opt.body, onDone:opt.onDone, topics:opt.topics||interviewTopics(), msgs:[], findings:[], answers:0, busy:false, say:'', problem:'', done:false};
+    IV={body:opt.body, onDone:opt.onDone, topics:opt.topics||interviewTopics(), guide:opt.guide||'', msgs:[], findings:[], answers:0, busy:false, say:'', problem:'', done:false};
     ivDraw(); ivAsk(false);
   };
   function ivDraw(state,heard){
@@ -80,7 +80,7 @@
     try{
       const ctx={weak:typeof weakList==='function'?weakList():[], misses:(DB.miss||[]).slice(0,5).map(m=>({q:m.q,a:m.a,g:m.g}))};
       let r, j;
-      for(let k=0;k<2;k++){ r=await fetch(API()+'/api/interview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),topics:IV.topics,ctx,messages:IV.msgs,final})}); j=await r.json().catch(()=>({})); if(r.ok&&j.say) break; }
+      for(let k=0;k<2;k++){ r=await fetch(API()+'/api/interview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),topics:IV.topics,guide:IV.guide,ctx,messages:IV.msgs,final})}); j=await r.json().catch(()=>({})); if(r.ok&&j.say) break; }
       if(!IV) return;
       IV.say=j.say||'음, 다시 한 번 말해 줄래?'; IV.problem=j.problem||''; IV.clock=/^\d{1,2}:\d{2}$/.test(j.clock||'')?j.clock:''; IV.done=!!j.done;
       (j.findings||[]).forEach(f=>IV.findings.push(Object.assign({t:Date.now()},f)));
@@ -102,6 +102,49 @@
     saveDB(); syncSoon(); const n=IV.findings.length, cb=IV.onDone; IV=null; cb&&cb(n);
   };
   window.ivEnd=function(){ if(!IV) return; if(IV.answers>=3){ IV.done=true; ivFinish(); } else { try{ speechSynthesis.cancel(); }catch(e){} IV=null; home(); } };
+
+  /* ---------- 📮 인터뷰 요청 (선생님·부모가 주제를 정해 보냄) ----------
+     아이 홈 맨 위 카드 + 알림(#interview). 중간에 '그만'을 눌러도(3번 미만 답) 요청은 남아 있어서 건너뛸 수 없다. */
+  const ivPost=b=>fetch(API()+'/api/interview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+  window.fetchIvReq=async function(){
+    if(DB.viewer||!navigator.onLine) return false;
+    try{ const j=await ivPost({action:'get',id:learnerId()}); const r=j.request;
+      const pend=r&&!r.done&&r.id!==DB.ivReqDone&&Date.now()-r.t<3*86400000?r:null;
+      const changed=JSON.stringify(pend)!==JSON.stringify(DB.ivReq||null); DB.ivReq=pend; if(changed) saveDB(); return changed; }catch(e){ return false; }
+  };
+  window.ivReqCardHTML=function(){
+    const r=DB.ivReq; if(!r||DB.viewer) return '';
+    return `<div class="card" style="border:3px solid #7c5cff;background:linear-gradient(135deg,#f3efff,#fff)"><h3 style="color:#5a3fd6">🎤 선생님이 너랑 이야기하고 싶대!</h3>
+      <p style="font-size:14.5px">3분만 말로 이야기하자. 네가 어떻게 생각하는지 궁금해서 그래 — 틀려도 괜찮아!</p>
+      <button class="bigbtn" style="background:#7c5cff;border-color:#7c5cff" onclick="startIvReq()">🎤 이야기 시작</button></div>`;
+  };
+  window.startIvReq=async function(){
+    if(!DB.ivReq) await fetchIvReq(); const r=DB.ivReq; if(!r){ home(); return; }
+    clearTimers(); PLAY=null; stopStudyClock(); setTheme(null); curUnit=null;
+    app.innerHTML=`<div class="topbar"><button class="back" onclick="ivEnd()">←</button><div class="t">🎤 선생님이랑 이야기</div></div><div id="stage-body"></div>`;
+    startStudyClock();
+    startInterview({body:$('#stage-body'), topics:r.topics, guide:r.guide, onDone:n=>{
+      DB.ivReqDone=r.id; DB.ivReq=null; saveDB(); ivPost({action:'done',id:learnerId(),reqId:r.id,findings:n}).catch(()=>{});
+      const got=typeof addStickers==='function'?addStickers(3):0; saveDB(); // 스티커는 오늘 과제를 다 했을 때만(엔진 규칙)
+      $('#stage-body').innerHTML=`<div class="card" style="text-align:center"><div style="font-size:54px">🎉</div><h3 style="justify-content:center">이야기 끝! 고마워</h3><p>선생님이 네 생각을 잘 들었어. 이걸로 다음 공부를 준비할게.</p>${got?`<p>🎟️ 스티커 +${got}</p>`:''}<button class="bigbtn" onclick="home()">홈으로</button></div>`; }});
+  };
+  // 부모 폰: 인터뷰 보내기 · 상태
+  let ivReqParent=null;
+  window.parentIvHTML=function(){
+    if(!DB.viewer) return ''; const r=ivReqParent;
+    const st=!r?'':r.done?`✅ 마지막 인터뷰 끝남 (${fmtAgo(r.doneAt)} · 확인 개념 ${r.findings||0}개)`:`⏳ 보냄 · 아직 안 함 (${fmtAgo(r.t)}) — ${r.topics.join(' / ')}`;
+    return `<div class="card" id="iv-parent"><h3>🎤 선생님 인터뷰</h3>${st?`<div class="dim" style="margin-bottom:8px">${st}</div>`:''}
+      <button class="askbtn" onclick="sendIvReq()">🎤 인터뷰 보내기</button></div>`;
+  };
+  window.fetchIvReqParent=async function(){ if(!DB.viewer) return; try{ const j=await ivPost({action:'get',id:DB.lid}); ivReqParent=j.request||null; const el=document.getElementById('iv-parent'); if(el) el.outerHTML=parentIvHTML(); }catch(e){} };
+  window.sendIvReq=async function(){
+    const R=(DB.reports||[])[0]; const def=(R&&R.interviewTopics||[]).slice(0,3);
+    const t=prompt(`무엇을 확인할까요? (쉼표로 여러 개, 비우면 리포트의 추천 주제)\n추천: ${def.join(' / ')||'없음'}`,''); if(t===null) return;
+    const topics=t.trim()?t.split(/[,，]/).map(s=>s.trim()).filter(Boolean).slice(0,4):def; if(!topics.length){ alert('주제를 적어 주세요.'); return; }
+    try{ const j=await ivPost({action:'request',id:DB.lid,topics,from:typeof famLabel==='function'?famLabel():'부모'}); if(j.ok){ ivReqParent=j.request; alert(j.pushed?'보냈어요! 아이 폰에 알림이 갔어요.':'보냈어요. (아이 폰 알림이 꺼져 있으면 앱을 열 때 보여요)'); } else alert(j.error||'못 보냈어요'); }
+    catch(e){ alert('인터넷 연결을 확인해 주세요.'); }
+    const el=document.getElementById('iv-parent'); if(el) el.outerHTML=parentIvHTML();
+  };
 
   /* ---------- 🗺️ 지도 계획 (아이 앱) ---------- */
   let planLast=0;

@@ -122,7 +122,12 @@
     for(let i=0;i<vals.length-1;i++){ if(vals[i]==null||vals[i+1]==null) continue; if(vals[i]!==vals[i+1]) return {ok:false, left:parts[i].trim(), want:vals[i], got:vals[i+1]}; }
     return {ok:vals.some(v=>v!=null)?true:null};
   }
-  const lastResult=()=>{ if(!W) return null; const L=W.lines.map(s=>s.trim()).filter(Boolean); if(!L.length) return null; const p=L[L.length-1].split('='); const v=p[p.length-1].trim(); return /^\d+$/.test(v)?v:null; };
+  // 식의 답 = 마지막 줄의 = 뒤 수. 단 마지막 줄이 문제의 수로 되돌아가는 검산 줄(21−12=9)이면 그 앞 줄의 답
+  const lastResult=()=>{ if(!W) return null; const L=W.lines.map(s=>s.trim()).filter(Boolean); if(!L.length) return null;
+    const qn=new Set((plainQ(W.c).match(/\d+/g)||[]).map(n=>String(+n)));
+    const res=L.map(s=>{ const p=s.split('='); const v=p[p.length-1].trim(); return /^\d+$/.test(v)?String(+v):null; });
+    for(let i=res.length-1;i>=0;i--){ if(res[i]==null) continue; if(i>0&&qn.has(res[i])&&res.slice(0,i).some(x=>x!=null)) continue; return res[i]; }
+    return null; };
   const lineResults=lines=>lines.map(s=>{ const p=s.split('='); const v=p[p.length-1].trim(); return /^\d+$/.test(v)?v:null; }).filter(Boolean);
   function lineDiagnose(lines,chk,c,ok){
     const bad=chk.findIndex(x=>x.ok===false);
@@ -257,7 +262,13 @@
   const leftNums=s=>(s.split('=')[0].match(/\d+/g)||[]).map(n=>String(+n));
   function workCheck(P){
     const c=W.c, S=seeds(c), lines=W.lines.map(s=>s.trim()).filter(Boolean);
-    const good=lines.filter(validLine), related=good.filter(s=>leftNums(s).some(n=>S.has(n)));
+    const good=[...new Set(lines.filter(validLine))]; // 같은 줄 반복은 한 줄
+    // 관련 있는 줄 = 문제의 수를 쓰거나, 앞 줄에서 나온 결과를 이어서 씀(10×2=20, 7×2=14 → 20+14=34 / 12+9=21 → 21−12=9 검산)
+    const known=new Set(S), related=[]; for(const s of good){ if(leftNums(s).some(n=>known.has(n))){ related.push(s); const p=s.split('='); known.add(String(+p[p.length-1].trim())); } }
+    // 9/25 실제 우회: "24×6=49" 처럼 아무 수를 = 뒤에 써서 답을 맞춤 → 필수 모드에선 각 줄의 계산이 맞아야 낼 수 있다
+    //  (식을 어떻게 세웠는지 — 개념 — 는 그대로 드러나고, 계산 실수는 스스로 고치게 된다. 고친 줄은 w.fix 로 기록)
+    for(const s of good){ const r=checkLine(s); if(r.ok===false){ W.fixes=W.fixes||[]; if(!W.fixes.includes(s)) W.fixes.push(s);
+      return `✍️ "${fmt(s)}" 계산을 다시 해 봐! ${J(r.got,'은','는')} ${r.left}의 답이 아니야. 식은 맞게 계산해야 해`; } }
     const E=W.col?colExpect(W.col):null, colFull=!!W.col&&E&&E.R.every((d,i)=>d===''||W.col.r[i]!=='');
     if(!related.length&&!colFull){
       if(lines.length&&!good.length) return '✍️ 식은 "수 기호 수 = 답"처럼 써 줘. 예) 문제의 수로 □ + □ = □';
@@ -265,7 +276,8 @@
       return W.col&&W.tab==='col'?'🧮 세로셈 답 칸을 끝까지 채워 줘':'✍️ 먼저 식을 한 줄 써 줘! 어떻게 계산할지 적으면 실수가 줄어';
     }
     // 틀렸던 유형을 다시 풀 땐 한 단계씩(두 줄 이상 또는 세로셈)
-    if((c.retry||c.fromWrong)&&related.length<2&&!colFull) return '✍️ 틀렸던 문제는 한 번에 말고 <b>한 단계씩</b> 두 줄 이상 써 줘 (또는 🧮 세로셈)';
+    // 정답을 이미 본 '같은 문제'를 다시 풀 땐 외운 답 한 줄로 끝내지 않게 두 줄 이상(한 단계씩, 또는 거꾸로 계산해 검산). 숫자가 바뀐 재도전(c.sib)은 외울 수 없으니 제외
+    if(((c.retry&&!c.sib)||c.fromWrong)&&related.length<2&&!colFull) return '✍️ 틀렸던 문제는 <b>두 줄 이상</b> 써 줘 — 한 단계씩 쓰거나, 거꾸로 계산해서 확인(검산)해 봐 (또는 🧮 세로셈)';
     // 답은 식에서 나와야 한다
     const results=new Set([...good.map(s=>{ const p=s.split('='); return String(+p[p.length-1].trim()); }), ...(colFull&&colResult()?[String(+colResult())]:[])]);
     if(!c.choices){ const a=P.buf===''?null:String(+P.buf);
@@ -276,23 +288,31 @@
       if(nums&&!nums.some(n=>all.has(String(+n)))) return '✍️ 고른 답이 식과 이어지지 않아. 식으로 계산한 수로 골라 줘'; }
     return '';
   }
+  // 🏳️ 두 번 막히면: 힌트 + "모르겠어" (정답을 보여 주고 오답으로 기록 — 무한 막힘·아무 식 쓰기 대신)
+  window.workGiveUp=function(){ const P=PLAY; if(!W||!P||W.done||P.locked) return; W.giveup=true; P.paceOk=true; P.pausing=false; P.buf='-1';
+    const s=DB.workStat=DB.workStat||{}; s.giveup=(s.giveup||0)+1; submit(); };
   window.workBeforeSubmit=function(P){
     if(!W||W.c!==P.cur||W.done) return true;
+    if(W.giveup) return true;
     const typed=P.buf!=='';
     if(!typed&&!W.c.choices&&W.open){ const r=W.tab==='col'?colResult():lastResult(); if(r!=null) P.buf=String(r); }
     if(W.required){ const why=workCheck(P);
       if(why){ if(!typed||W.c.choices) P.buf=''; W.open=true; W.target='note'; draw();
         const s=DB.workStat=DB.workStat||{}; s.rej=(s.rej||0)+1; saveDB(); // 막힌 횟수(부모 화면·리포트)
-        const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.innerHTML=why; } return false; } }
+        W.rej=(W.rej||0)+1; if(W.rej>=2&&W.c.hint) W.help=true;
+        const help=W.rej>=2?`<div class="wk-msg">${W.c.hint?`💡 힌트: ${W.c.hint}`:'💡 문제를 다시 읽고 무엇을 구하는지 찾아 봐'}<div style="margin-top:8px"><button class="askbtn" onclick="workGiveUp()">🏳️ 모르겠어 — 풀이 볼래</button></div></div>`:'';
+        const fb=document.getElementById('fb'); if(fb){ fb.className='feedback'; fb.innerHTML=why+help; } return false; } }
     return true;
   };
   window.workCollect=function(P,c,ok){
     if(!W||W.c!==c) return undefined; W.done=true;
+    if(W.giveup) c.given='모름';
     const lines=W.lines.map(s=>s.trim()).filter(Boolean);
     const colUsed=!!W.col&&(W.col.r.some(Boolean)||W.col.h.some(Boolean));
     if(W.eligible){ const s=DB.workStat=DB.workStat||{}; const key=(lines.length||colUsed)?'w':'nw'; const x=s[key]=s[key]||{n:0,ok:0}; x.n++; if(ok) x.ok++; }
-    if(!lines.length&&!colUsed){ W.open=false; draw(); return undefined; }
+    if(!lines.length&&!colUsed){ W.open=false; draw(); return W.giveup||W.rej?{giveup:W.giveup?1:undefined,rej:W.rej||undefined,help:W.help?1:undefined,fix:W.fixes,dx:'none'}:undefined; }
     const w={sec:Math.round((Date.now()-W.t0)/1000)}; let d={dx:ok?'ok':'none', m:''};
+    if(W.fixes&&W.fixes.length) w.fix=W.fixes.slice(0,6); if(W.rej) w.rej=W.rej; if(W.help) w.help=1; if(W.giveup) w.giveup=1;
     if(lines.length){ w.l=lines; const chk=W.lines.map(s=>s.trim()?checkLine(s):{ok:null}); W.marks=chk; d=lineDiagnose(W.lines.filter(s=>s.trim()),chk.filter((_,i)=>W.lines[i].trim()),c,ok); }
     if(colUsed){ const S=W.col; w.col={op:S.op,a:S.a,b:S.b,h:S.h.join(','),r:S.r.join('')};
       const cd=!ok||W.tab==='col'?colDiagnose(S):null; if(cd&&(W.tab==='col'||!lines.length||d.dx==='ok'||d.dx==='none')) d=cd; }
@@ -317,7 +337,7 @@
     return `<div class="card"><h3>✍️ 식 쓰고 풀기 vs 암산</h3><div class="dash-grid">
       <div class="dash-stat"><div class="v">${pc(w)}</div><div class="k">식 쓰고 푼 문제 (${w.n})</div></div>
       <div class="dash-stat"><div class="v">${pc(n)}</div><div class="k">암산으로 푼 문제 (${n.n})</div></div></div>
-      <p class="dim" style="margin-top:6px">계산이 필요한 문제만 셌어요.${s.rej?` · 식 없이(또는 대충) 내려다 막힌 횟수 <b>${s.rej}</b>`:''}</p></div>`;
+      <p class="dim" style="margin-top:6px">계산이 필요한 문제만 셌어요.${s.rej?` · 식 없이(또는 대충) 내려다 막힌 횟수 <b>${s.rej}</b>`:''}${s.giveup?` · 🏳️ 모르겠어 <b>${s.giveup}</b>번`:''}</p></div>`;
   };
   const DXN={calc:'식 안 계산 실수',place:'자릿값 놓침(십을 1로)',copy:'답 옮겨 쓰기 실수',plan:'식 세우기 오류',concat:'자릿값 무시(붙여 쓰기)',carryAdd:'올린 수 안 더함',noCarry:'올림 안 함',reverseSub:'거꾸로 빼기',borrowNoDec:'빌려 준 자리 안 줄임',digit:'자리 계산 실수',none:'식으로는 원인 불명'};
   window.workInsightHTML=function(limit){

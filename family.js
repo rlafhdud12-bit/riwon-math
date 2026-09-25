@@ -257,6 +257,7 @@
     const h=location.hash; if(!h) return; history.replaceState(null,'',location.pathname+location.search);
     if(h==='#family') openFamily();
     else if(h==='#report'&&DB.viewer&&typeof fetchReports==='function') fetchReports().then(()=>renderReport(0));
+    else if(h==='#interview'&&!DB.viewer&&typeof startIvReq==='function'){ if(typeof PLAY!=='undefined'&&PLAY) return; startIvReq(); }
   };
   if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message',e=>{
     if(e.data&&e.data.hash){ location.hash=e.data.hash; routeHash(); return; }
@@ -264,7 +265,7 @@
     if(e.data&&e.data.push){ const idle=()=>!PLAY&&!curUnit&&!document.getElementById('family');
       if(document.getElementById('family')) famPull();
       else checkFamily().then(ch=>{ if(ch&&idle()) home(); });
-      if(!DB.viewer){ if(typeof fetchCheer==='function') fetchCheer(); if(typeof fetchHomework==='function') fetchHomework().then(ok=>{ if(ok&&idle()) home(); }); }
+      if(!DB.viewer){ if(typeof fetchIvReq==='function') fetchIvReq().then(ch=>{ if(ch&&idle()) home(); }); if(typeof fetchCheer==='function') fetchCheer(); if(typeof fetchHomework==='function') fetchHomework().then(ok=>{ if(ok&&idle()) home(); }); }
       else if(typeof pullNow==='function') pullNow(true).then(ok=>{ if(ok&&idle()) home(); }); }
   });
 })();

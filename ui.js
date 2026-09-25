@@ -24,6 +24,7 @@
         <div class="hright"><span class="hpill">🎟️ ${DB.stickers}</span>${streak?`<span class="hpill">🔥 ${streak}일</span>`:''}<button class="hpill" onclick="toggleMute()">${DB.muted?'🔇':'🔊'}</button></div></div>
       ${gradeBar}
       ${typeof notifBarHTML==='function'?notifBarHTML():''}
+      ${typeof ivReqCardHTML==='function'?ivReqCardHTML():''}
       ${typeof questCardHTML==='function'?questCardHTML():''}
       ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
       <div class="row3"><button class="pri" onclick="openChat(null)">🤖 선생님</button><button onclick="openFamily()">💬 ${typeof famLabel==='function'?famLabel():'아빠'}${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
@@ -98,6 +99,7 @@
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
       ${typeof parentReportHTML==='function'?parentReportHTML():''}
       ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
+      ${typeof parentIvHTML==='function'?parentIvHTML():''}
       ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}
       ${typeof workInsightHTML==='function'?workInsightHTML(4):''}

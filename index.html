@@ -3282,7 +3282,9 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="ui.js"></script>
 <script>
 home();
-if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); if(typeof presenceStart==='function'){ presenceStart(); presenceWatch(); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }
+if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); if(typeof presenceStart==='function'){ presenceStart(); presenceWatch(); }
+  if(typeof fetchIvReq==='function'){ const ivTick=()=>fetchIvReq().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); ivTick(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) ivTick(); }); }
+  if(typeof fetchIvReqParent==='function') fetchIvReqParent(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }
 if(typeof routeHash==='function') routeHash();
 if(DB.viewer){ pullNow(true).then(ok=>{ if(ok) home(); }); fetchCheer(true); if(typeof fetchReports==='function'){ subscribeReports(); fetchReports().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); } document.addEventListener('visibilitychange',()=>{ if(!document.hidden) pullNow().then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); }); }
 else { fetchCheer(true); if(typeof fetchPlan==='function') fetchPlan(); if(typeof fetchHomework==='function') fetchHomework(true).then(ok=>{ if(ok&&!PLAY&&!curUnit) home(); }); if(DB.totalSolved>0 && (!DB.lastSync || Date.now()-DB.lastSync>6*3600*1000)) syncSoon(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchCheer(); }); }
