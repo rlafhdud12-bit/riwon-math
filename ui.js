@@ -27,6 +27,7 @@
       ${typeof ivReqCardHTML==='function'?ivReqCardHTML():''}
       ${typeof questCardHTML==='function'?questCardHTML():''}
       ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
+      ${typeof bridgeChildCardHTML==='function'?bridgeChildCardHTML():''}
       <div class="row3"><button class="pri" onclick="openChat(null)">🤖 선생님</button><button onclick="openFamily()">💬 ${typeof famLabel==='function'?famLabel():'아빠'}${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
       ${math.length?head('🧮','수학')+grid(math):''}
       ${others.length?`<details class="more"><summary>${others.map(x=>x.s.name).join(' · ')} — 단원 ${others.reduce((n,x)=>n+x.us.length,0)}개</summary>${others.map(x=>head(x.s.emoji,x.s.name)+grid(x.us)).join('')}</details>`:''}
@@ -95,7 +96,8 @@
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
       ${typeof notifBarHTML==='function'?notifBarHTML():''}
       ${typeof presenceHTML==='function'?presenceHTML():''}
-      <div class="row3"><button class="pri" onclick="openFamily()">💬 ${DB.name?nameI(DB.name):'아이'}와 채팅${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button style="background:#e056a0;border-color:#e056a0;color:#fff" onclick="renderGallery()">💌 응원 카드</button><button onclick="openChat(null)">🤖 선생님</button></div>
+      <div class="row3"><button class="pri" onclick="openFamily()">💬 ${DB.name?nameI(DB.name):'아이'}와 채팅${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button style="background:#e056a0;border-color:#e056a0;color:#fff" onclick="renderGallery()">💌 응원 카드</button></div>
+      ${typeof bridgeParentHTML==='function'?bridgeParentHTML():''}
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
       ${typeof parentReportHTML==='function'?parentReportHTML():''}
       ${typeof parentQuestHTML==='function'?parentQuestHTML():''}

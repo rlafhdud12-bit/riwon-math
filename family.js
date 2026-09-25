@@ -198,6 +198,7 @@
   let lastInput=0, lastPing=0, lastScreen='', pingTimer=null;
   function screenName(){
     if(document.getElementById('family')) return '💬 가족 채팅';
+    if(document.getElementById('bridge-overlay')) return '🗣️ 내 생각 설명 쓰는 중';
     if(document.getElementById('chat')) return '🤖 선생님 채팅';
     if(document.querySelector('.iv-row,.iv-prob')) return '🎤 음성 인터뷰';
     if(typeof PLAY!=='undefined'&&PLAY){ const u=(UNITS.find(x=>x.id===(PLAY.cur&&PLAY.cur.unitId||PLAY.unitId))||{}).name;

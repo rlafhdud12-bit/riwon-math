@@ -409,11 +409,15 @@ function weakList(){
 let CHAT=null;
 function openChat(ctx){
   clearTimers();
-  CHAT={ctx:ctx||null, msgs:[], busy:false, prev:app.innerHTML, prevStage:curStage};
+  CHAT={ctx:ctx||null, audience:DB.viewer?"parent":"child", msgs:[], busy:false, prev:app.innerHTML, prevStage:curStage};
   const el=document.createElement('div'); el.className='chat-wrap'; el.id='chat';
   document.body.appendChild(el);
   renderChat();
-  const hello=ctx&&ctx.given!==undefined
+  const hello=CHAT.audience==="parent"
+    ? "안녕하세요. 아이가 남긴 설명과 풀이 기록을 함께 보고, 집에서 어떻게 도울지 상의해 보겠습니다. 궁금한 점을 말씀해 주세요."
+    : ctx&&ctx.explanation
+    ? '네가 어떻게 생각했는지 읽었어. 함께 한 번 더 살펴볼까?'
+    : ctx&&ctx.given!==undefined
     ? '안녕! 방금 문제, 같이 볼까? 왜 그렇게 생각했는지 궁금해. 어떻게 풀었는지 말해 줄래?'
     : (ctx&&ctx.q ? '안녕! 이 문제 어디가 헷갈려? 편하게 물어봐.' : '안녕! 나는 수학 선생님이야. 궁금한 거 뭐든 물어봐 😊');
   pushMsg('t',hello,true);
@@ -422,12 +426,14 @@ function closeChat(){ const el=document.getElementById('chat'); if(el) el.remove
 function renderChat(){
   const el=document.getElementById('chat'); if(!el||!CHAT) return;
   const ctx=CHAT.ctx;
-  const chips=ctx&&ctx.q?['왜 틀렸어?','다른 방법으로 설명해 줘','힌트만 줘','이건 왜 그래?']:['곱셈이 헷갈려','나눗셈 알려 줘','분수가 어려워','받아올림이 헷갈려'];
+  const chips=CHAT.audience==="parent"?["최근 설명에서 어떤 생각이 보여요?","집에서 어떻게 물어볼까요?","오늘은 무엇을 같이 해볼까요?"]
+    :ctx&&ctx.explanation?["내 설명이 맞는지 봐 줘","다른 방법도 알려 줘","비슷한 문제 내 줘"]
+    :ctx&&ctx.q?['왜 틀렸어?','다른 방법으로 설명해 줘','힌트만 줘','이건 왜 그래?']:['곱셈이 헷갈려','나눗셈 알려 줘','분수가 어려워','받아올림이 헷갈려'];
   el.innerHTML=`
-    <div class="chat-top"><button class="back" onclick="closeChat()">←</button><div class="t">🙋 선생님한테 물어보기</div><span class="sync-dot" id="chat-left"></span></div>
+    <div class="chat-top"><button class="back" onclick="closeChat()">←</button><div class="t">${CHAT.audience==="parent"?"👨‍👧 선생님과 상담":"🙋 선생님한테 물어보기"}</div>${CHAT.audience==="parent"?'<button class="mini" onclick="closeChat();openFamily()">아이와 대화</button>':''}<span class="sync-dot" id="chat-left"></span></div>
     <div class="chat-log" id="chat-log">${ctx&&ctx.q?`<div class="msg sys">📌 ${ctx.q.replace(/<[^>]+>/g,'')}${ctx.given!==undefined?` · 내 답: ${ctx.given}`:''}</div>`:''}</div>
-    <div class="chips">${chips.map(c=>`<button onclick="sendChat(${JSON.stringify(c)})">${c}</button>`).join('')}</div>
-    <div class="chat-in"><button id="chat-mic" onclick="chatMic()" style="background:#fff;color:var(--c-dark);border:2px solid #eee;padding:0 12px">🎤</button><input id="chat-input" placeholder="선생님한테 말해 봐…" maxlength="300" onkeydown="if(event.key==='Enter'){sendChat()}"><button id="chat-send" onclick="sendChat()">보내기</button></div>`;
+    <div class="chips">${chips.map(c=>`<button onclick="sendChat(${JSON.stringify(c).replace(/"/g,'&quot;')})">${c}</button>`).join('')}</div>
+    <div class="chat-in"><button id="chat-mic" onclick="chatMic()" style="background:#fff;color:var(--c-dark);border:2px solid #eee;padding:0 12px">🎤</button><input id="chat-input" placeholder="${CHAT.audience==='parent'?'아이의 공부에 관해 상담해 보세요…':'선생님한테 말해 봐…'}" maxlength="300" onkeydown="if(event.key==='Enter'){sendChat()}"><button id="chat-send" onclick="sendChat()">보내기</button></div>`;
   CHAT.msgs.forEach(m=>appendBubble(m.role==='user'?'me':'t',m.content));
 }
 function appendBubble(kind,text){
@@ -447,11 +453,12 @@ async function sendChat(preset){
   CHAT.busy=true; const btn=document.getElementById('chat-send'); if(btn) btn.disabled=true;
   const wait=appendBubble('t','생각 중…');
   try{
-    const ctx=CHAT.ctx?Object.assign({},CHAT.ctx,{weak:weakList()}):{weak:weakList()};
-    const r=await fetch(TUTOR_API+'/api/tutor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),messages:CHAT.msgs.slice(-12),ctx})});
+    const ctx=CHAT.audience==="parent"?Object.assign({weak:weakList()},typeof bridgeParentContext==="function"?bridgeParentContext():{})
+      :CHAT.ctx?Object.assign({},CHAT.ctx,{weak:weakList()}):{weak:weakList()};
+    const r=await fetch(TUTOR_API+'/api/tutor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:learnerId(),audience:CHAT.audience,messages:CHAT.msgs.slice(-12),ctx})});
     const j=await r.json().catch(()=>({}));
     wait.remove();
-    pushMsg('t', j.text||'앗, 선생님 연결이 잠깐 안 돼. 다시 눌러 줄래?', !!j.retry);
+    pushMsg('t', j.text||(CHAT.audience==="parent"?"상담 연결이 잠시 끊겼습니다. 다시 시도해 주세요.":"앗, 선생님 연결이 잠깐 안 돼. 다시 눌러 줄래?"), !!j.retry);
     if(typeof j.remaining==='number'){ const l=document.getElementById('chat-left'); if(l) l.textContent=j.remaining<=10?`오늘 ${j.remaining}번 남음`:''; }
   }catch(e){ wait.remove(); pushMsg('t','인터넷이 안 되나 봐. 연결되면 다시 물어봐 줘!',true); }
   CHAT.busy=false; if(btn) btn.disabled=false;
@@ -825,6 +832,7 @@ function submit(){
   c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
   c.work=typeof workCollect==='function'?workCollect(P,c,ok):undefined; // ✍️ 아이가 쓴 식(오답 원인 추론용)
   markStat(c.unitId||P.unitId,c.cat,ok); // 과제(여러 단원 섞임)는 문제의 단원으로 기록
+  if(!ok) DB.lastExplainQuestion={t:Date.now(),u:c.unitId||P.unitId,unit:(UNITS.find(u=>u.id===(c.unitId||P.unitId))||{}).name||"수학",cat:c.cat,q:String(c.q).replace(/<[^>]*>/g,"").slice(0,160),a:c.choices?c.choices[c.a]:c.a,g:c.given,ok};
   if(typeof paceRecord==='function') paceRecord(P,ok);
   const ansEl=$('#ans');
   if(c.choices){ c.choices.forEach((_,i)=>{ const b=$('#ch'+i); if(!b)return; b.disabled=true;
@@ -3279,6 +3287,7 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="coach.js"></script>
 <script src="family.js"></script>
 <script src="work.js"></script>
+<script src="bridge.js"></script>
 <script src="ui.js"></script>
 <script>
 home();
