@@ -66,7 +66,9 @@
   // 기본 = 필수(2026-09-24 대표 결정). 서버 설정이 우선 — 부모 폰에서만 바꾼다
   window.workModeNow=()=>(DB.remind&&DB.remind.workMode)||'must';
   // 계산이 필요한 문제 = 두 자리 이상 수가 나오는 문제(구구단 한 자리 곱은 암기라 제외)
-  const eligible=c=>/\d{2,}/.test(plainQ(c));
+  // 식 쓰기는 수학만(9/26 대표 신고: 국어·과학·사회·영어 문제에도 식을 적으라고 나옴). 단원을 모르는 문제(사진 숙제 'hw' 등)는 수학으로 본다
+  const subjOf=c=>{ const id=(c&&c.unitId)||(typeof PLAY!=='undefined'&&PLAY&&PLAY.unitId); const u=typeof UNITS!=='undefined'&&UNITS.find(x=>x.id===id); return u?u.subj:'math'; };
+  const eligible=c=>subjOf(c)==='math'&&/\d{2,}/.test(plainQ(c));
   window.workEligible=eligible;
 
   /* ---------- 세로셈이 되는 문제인지 ---------- */
