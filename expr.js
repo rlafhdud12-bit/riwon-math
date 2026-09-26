@@ -282,7 +282,7 @@
       </div>
       <div class="card"><h3>문제 유형 고르기 <span class="dim">${nSel}개 선택</span></h3><p class="dim">고른 유형을 골고루 섞어 ${Q.n}문제를 만들어요.</p>${groups}</div>
       <button class="bigbtn" style="background:#8e44ad" onclick="sendQuest()">🎁 보내기</button>
-      <div class="credit">리원이 폰에 "숙제 보너스가 도착했어요" 팝업과 퀘스트 카드가 떠요. 매일 과제와는 별개의 보너스예요.</div>`;
+      <div class="credit">아이 폰에 "숙제 보너스가 도착했어요" 팝업과 퀘스트 카드가 떠요. 매일 과제와는 별개의 보너스예요.</div>`;
   };
   window.sendQuest=async function(){
     const Q=window._qm; const keys=Object.keys(Q.sel).filter(k=>Q.sel[k]); if(!keys.length){ alert('문제 유형을 하나 이상 골라 주세요.'); return; }

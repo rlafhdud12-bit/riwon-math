@@ -20,19 +20,24 @@
     const others=SUBJECTS.filter(s=>s.id!=='math').map(s=>({s,us:UNITS.filter(u=>inG(u)&&u.subj===s.id)})).filter(x=>x.us.length);
     const streak=typeof dailyStreak==='function'?dailyStreak():0;
     app.innerHTML=`
-      <div class="hbar"><div class="htitle">${appTitle()} ✨</div>
-        <div class="hright"><span class="hpill">🎟️ ${DB.stickers}</span>${streak?`<span class="hpill">🔥 ${streak}일</span>`:''}<button class="hpill" onclick="toggleMute()">${DB.muted?'🔇':'🔊'}</button></div></div>
+      <div class="hbar"><div class="htitle"><small>MY SHINING DAY</small>${appTitle()}</div>
+        <div class="hright"><span class="hpill star">🌟 으쓱 ${DB.stickers}</span>${streak?`<span class="hpill">🔥 ${streak}일</span>`:''}<button class="hpill" onclick="toggleMute()">${DB.muted?'🔇':'🔊'}</button></div></div>
       ${gradeBar}
-      ${typeof notifBarHTML==='function'?notifBarHTML():''}
       ${typeof ivReqCardHTML==='function'?ivReqCardHTML():''}
       ${typeof questCardHTML==='function'?questCardHTML():''}
       ${g===3&&typeof dailyCardHTML==='function'?dailyCardHTML():''}
+      <div id="goals-home-summary">${typeof goalsSummaryHTML==='function'?goalsSummaryHTML():''}</div>
       ${typeof bridgeChildCardHTML==='function'?bridgeChildCardHTML():''}
       <div class="row3"><button class="pri" onclick="openChat(null)">🤖 선생님</button><button onclick="openFamily()">💬 ${typeof famLabel==='function'?famLabel():'아빠'}${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button onclick="renderGallery()">🎴 카드</button><button onclick="renderDashboard()">📊 기록</button></div>
+      <div class="feature-grid"><button onclick="openFanThemes()">나의 아이돌 테마<small>로라 · 장원영</small></button><button onclick="openInterestMission()">댄스 & 탐구 미션<small>방향 · 글 읽기 · 수 감각</small></button></div>
+      ${typeof notifBarHTML==='function'?notifBarHTML():''}
+      <details class="parent-section"><summary>더 배우고 싶은 단원 고르기</summary>
       ${math.length?head('🧮','수학')+grid(math):''}
       ${others.length?`<details class="more"><summary>${others.map(x=>x.s.name).join(' · ')} — 단원 ${others.reduce((n,x)=>n+x.us.length,0)}개</summary>${others.map(x=>head(x.s.emoji,x.s.name)+grid(x.us)).join('')}</details>`:''}
       ${!math.length&&!others.length?`<div class="credit" style="margin:34px 0;font-size:16px">📚 ${g}학년 내용은 곧 추가될 거예요!</div>`:''}
-      <div class="credit"><span id="sync-dot">${syncLabel()}</span></div>`;
+      </details>
+      <div class="credit"><span id="sync-dot">${syncLabel()}</span><br><button class="photo-credit-link" onclick="openPhotoCredits()">사진 출처 · 이용허락</button></div>`;
+    if(typeof ensureGoalsRefresh==='function')ensureGoalsRefresh();
   };
 
   /* ---------- 왜 틀렸을까 (아이·부모 공용) ---------- */
@@ -94,15 +99,15 @@
     app.innerHTML=`
       <div class="hbar"><div class="htitle">${appTitle()} <span class="dim">· 부모</span></div>
         <div class="hright"><span class="hpill">👀 ${DB.lastPull?fmtAgo(DB.lastPull):'…'}</span><button class="hpill" onclick="pullNow(true).then(()=>{fetchHomework(true).then(()=>home())})">🔄</button></div></div>
-      ${typeof notifBarHTML==='function'?notifBarHTML():''}
       ${typeof presenceHTML==='function'?presenceHTML():''}
+      ${typeof notifBarHTML==='function'?notifBarHTML():''}
       <div class="row3"><button class="pri" onclick="openFamily()">💬 ${DB.name?nameI(DB.name):'아이'}와 채팅${typeof famUnread==='function'&&famUnread()?`<span class="badge">${famUnread()}</span>`:''}</button><button style="background:#e056a0;border-color:#e056a0;color:#fff" onclick="renderGallery()">💌 응원 카드</button></div>
       ${typeof bridgeParentHTML==='function'?bridgeParentHTML():''}
+      <div id="goals-home-summary">${typeof goalsSummaryHTML==='function'?goalsSummaryHTML():''}</div>
+      <div class="feature-grid"><button onclick="openSchoolPlan()">학교 주간계획표<small>사진 → 확인 → 학교 진도</small></button><button onclick="openLearningProfile()">선생님의 학습 관찰<small>첫 풀이 · 도움 · 다음 연습</small></button></div>
       ${typeof dailyCardHTML==='function'?dailyCardHTML():''}
+      <details class="parent-section"><summary>선생님의 리포트와 학습 기록</summary>
       ${typeof parentReportHTML==='function'?parentReportHTML():''}
-      ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
-      ${typeof parentIvHTML==='function'?parentIvHTML():''}
-      ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
       ${whyCardHTML(5)||'<div class="card"><h3>🔍 왜 틀렸을까</h3><p class="dim">아직 오답 기록이 없어요.</p></div>'}
       ${typeof workInsightHTML==='function'?workInsightHTML(4):''}
       ${typeof dailyAchievementHTML==='function'?dailyAchievementHTML():''}
@@ -111,6 +116,12 @@
       <details class="more"><summary>더 보기 — 최근 7일 · 단원별 정답률</summary>
         <div class="card" style="margin-top:8px"><h3>📅 최근 7일</h3>${weekChart()}</div>
         <div class="card">${unitRowsHTML()}</div></details>
+      </details>
+      <details class="parent-section"><summary>숙제 · 보너스 퀘스트 · 인터뷰 보내기</summary>
+      ${typeof parentQuestHTML==='function'?parentQuestHTML():''}
+      ${typeof parentIvHTML==='function'?parentIvHTML():''}
+      ${typeof parentHomeworkHTML==='function'?parentHomeworkHTML():''}
+      </details>
       <details class="more"><summary>설정</summary>
         <div class="card" style="margin-top:8px">
           <div class="setrow"><div class="k">👧 아이 이름<small>이 폰 제목 표시용</small></div><button class="wpill" onclick="setChildName()">${DB.name?'바꾸기':'넣기'}</button></div>
@@ -118,6 +129,8 @@
           ${typeof remindSettingHTML==='function'?remindSettingHTML():''}
           ${typeof workModeSettingHTML==='function'?workModeSettingHTML():''}
           <div class="setrow"><div class="k">가족 코드<small>${DB.lid}</small></div><button class="wpill" onclick="leaveViewer()">함께 보기 끄기</button></div>
-        </div></details>`;
+        </div></details>
+      <div class="credit"><button class="photo-credit-link" onclick="openPhotoCredits()">사진 출처 · 이용허락</button></div>`;
+    if(typeof ensureGoalsRefresh==='function')ensureGoalsRefresh();
   };
 })();

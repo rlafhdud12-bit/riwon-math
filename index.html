@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#ff9f43">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fff8fc">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="공부노트">
@@ -265,6 +265,7 @@
   .conf{position:absolute; width:10px; height:14px; top:-20px; border-radius:2px; animation:fall linear forwards;}
   @keyframes fall{to{transform:translateY(110vh) rotate(720deg); opacity:.9;}}
 </style>
+<link rel="stylesheet" href="family-look.css">
 </head>
 <body>
 <div class="wrap" id="app"></div>
@@ -346,7 +347,7 @@ async function syncNow(){
   if(DB.viewer) return; // 함께 보기 모드(부모 폰)는 서버에 쓰지 않는다
   if(syncBusy||!navigator.onLine) return; syncBusy=true;
   try{
-    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; // 이름은 폰에만
+    const db=Object.assign({},DB); delete db.fam; delete db.cheer; delete db.reports; delete db.name; delete db.schoolPlans; // 학교 계획은 전용 서버, 이름은 폰에만
     ['pin','pinLock','pushOn','pushSync','devId','parentNames','famRead','famUnread','parentLabel','remind','remindCounts','notifBarHide'].forEach(k=>delete db[k]); // 기기 전용 상태 // 사진이 든 카드는 학습기록에 안 보냄(응원 카드는 따로)
     db.hw={done:(DB.hw&&DB.hw.done)||{}}; // 숙제 문제 본문(시계 그림 등)은 크니 결과만
     db.catalog=UNITS.filter(u=>(u.grade||3)===3&&u.subj==='math'&&MODULES[u.id]).map(u=>({id:u.id,name:u.name,cats:(MODULES[u.id].gens||[]).map(g=>g.cat)})); // 리포트 분석용 유형 목록
@@ -502,7 +503,7 @@ async function pullNow(force){
     const r=await fetch(TUTOR_API+'/api/record?id='+encodeURIComponent(DB.lid)); if(!r.ok){ pullBusy=false; return false; }
     const j=await r.json(); if(!j.db){ pullBusy=false; return false; }
     // 부모 폰 자체 설정(PIN·잠금·소리·가족카드·학년)은 유지하고, 학습 기록만 아이 것으로 바꾼다
-    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, reports:DB.reports, reportSeen:DB.reportSeen, reportSub:DB.reportSub, reportJob:DB.reportJob, hwJobs:DB.hwJobs, name:DB.name||j.db.name,
+    const keep={pin:DB.pin, muted:DB.muted, fam:DB.fam, cheer:DB.cheer, cheerSeen:DB.cheerSeen, reports:DB.reports, reportSeen:DB.reportSeen, reportSub:DB.reportSub, reportJob:DB.reportJob, hwJobs:DB.hwJobs, schoolPlans:DB.schoolPlans, name:DB.name||j.db.name,
       // 이 폰(부모) 전용 알림·채팅 상태 — 아이 기록으로 덮으면 알림 켜짐·읽음 표시·호칭이 사라진다
       pushOn:DB.pushOn, pushSync:DB.pushSync, devId:DB.devId, famRead:DB.famRead, famUnread:DB.famUnread, parentLabel:DB.parentLabel, remind:DB.remind, remindCounts:DB.remindCounts, notifBarHide:DB.notifBarHide, viewer:true, lid:DB.lid, lastPull:Date.now(), grade:DB.grade, locked:DB.locked||{1:true,2:true,4:true,5:true,6:true}, stages:DB.stages};
     DB=Object.assign(j.db,keep); saveDB(); lastPull=Date.now(); pullBusy=false; return true;
@@ -830,7 +831,8 @@ function submit(){
   if(typeof paceCheck==='function'&&paceCheck(P)) return; // 너무 빠르면 채점 전에 한 번 멈춤
   const c=P.cur, val=parseInt(P.buf,10), ok=(val===c.a), fb=$('#fb');
   c.given=c.choices?(c.choices[val]!==undefined?c.choices[val]:P.buf):val; // 아이가 쓴 답(오답 원인 분석용)
-  c.work=typeof workCollect==='function'?workCollect(P,c,ok):undefined; // ✍️ 아이가 쓴 식(오답 원인 추론용)
+  c.work=typeof workCollect==='function'?workCollect(P,c,ok):undefined;
+  if(typeof learningRecordAttempt==='function') learningRecordAttempt(P,ok); // ✍️ 아이가 쓴 식(오답 원인 추론용)
   markStat(c.unitId||P.unitId,c.cat,ok); // 과제(여러 단원 섞임)는 문제의 단원으로 기록
   if(!ok) DB.lastExplainQuestion={t:Date.now(),u:c.unitId||P.unitId,unit:(UNITS.find(u=>u.id===(c.unitId||P.unitId))||{}).name||"수학",cat:c.cat,q:String(c.q).replace(/<[^>]*>/g,"").slice(0,160),a:c.choices?c.choices[c.a]:c.a,g:c.given,ok};
   if(typeof paceRecord==='function') paceRecord(P,ok);
@@ -1248,6 +1250,7 @@ function tutorBeats(q){
 }
 function openHelp(){
   const P=PLAY; if(!P||!P.cur||(P.locked&&!P.awaitNext)) return;
+  if(typeof learningMarkHelp==='function') learningMarkHelp(P);
   clearTimers(); P.helping=true; P.buf='';
   window._TT={beats:tutorBeats(P.cur), i:0, buf:'', locked:false, adv:!!P.awaitNext};
   renderBeat();
@@ -3288,9 +3291,18 @@ if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.s
 <script src="family.js"></script>
 <script src="work.js"></script>
 <script src="bridge.js"></script>
+<script src="learning-loop.js"></script>
+<script src="school-plan.js"></script>
+<script src="reward-goals.js"></script>
+<script src="fan-theme.js"></script>
+<script src="family-look.js"></script>
 <script src="ui.js"></script>
 <script>
 home();
+if(typeof fetchSchoolPlans==='function'){
+  fetchSchoolPlans(true).then(()=>{if(!PLAY&&!curUnit&&!document.querySelector('.bridge-overlay,#school-plan-dialog,#reward-goals'))home();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchSchoolPlans();});
+}
 if(typeof checkFamily==='function'){ const famTick=()=>checkFamily().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); famTick(); loadRemind(); resyncPush(); if(typeof presenceStart==='function'){ presenceStart(); presenceWatch(); }
   if(typeof fetchIvReq==='function'){ const ivTick=()=>fetchIvReq().then(ch=>{ if(ch&&!PLAY&&!curUnit&&!document.getElementById('family')) home(); }); ivTick(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) ivTick(); }); }
   if(typeof fetchIvReqParent==='function') fetchIvReqParent(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ famTick(); loadRemind(); } }); }

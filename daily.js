@@ -13,14 +13,16 @@
   const dkey=()=>todayKey();
   function todayTask(){ return (DB.daily||{})[dkey()]||null; }
 
-  /* 약점 유형 점수: 단원 통계(틀린 수) + 최근 오답 로그(최근 60개, 가중) */
+  /* 기존 단원 통계·최근 오답·선생님 계획을 기본으로 유지. 충분한 새 독립 풀이만 가중치를 낮춘다. */
   function weakScores(){
-    const s={}; // key unit|cat → score
-    mathUnits().forEach(u=>{ const cats=unitDB(u.id).cats; for(const c in cats){ if(cats[c].wrong>0) s[u.id+'|'+c]=(s[u.id+'|'+c]||0)+cats[c].wrong; } });
-    ((DB.plan&&DB.plan.focus)||[]).forEach(k=>{ if(mathUnits().some(u=>u.id===k.split('|')[0])) s[k]=(s[k]||0)+4; }); // 선생님 리포트의 다음 주 집중 유형(3학년 수학만)
-    (DB.miss||[]).slice(0,60).forEach(m=>{ if(m.u&&m.cat&&mathUnits().some(u=>u.id===m.u)) s[m.u+'|'+m.cat]=(s[m.u+'|'+m.cat]||0)+1.5; });
-    return Object.entries(s).map(([k,v])=>{ const [unit,cat]=k.split('|'); return {unit,cat,score:v}; }).sort((a,b)=>b.score-a.score);
+    const s={};
+    mathUnits().forEach(u=>{const cats=unitDB(u.id).cats;for(const c in cats){if(cats[c].wrong>0)s[u.id+'|'+c]=(s[u.id+'|'+c]||0)+cats[c].wrong;}});
+    ((DB.plan&&DB.plan.focus)||[]).forEach(k=>{if(mathUnits().some(u=>u.id===k.split('|')[0]))s[k]=(s[k]||0)+4;});
+    (DB.miss||[]).slice(0,60).forEach(m=>{if(m.u&&m.cat&&mathUnits().some(u=>u.id===m.u))s[m.u+'|'+m.cat]=(s[m.u+'|'+m.cat]||0)+1.5;});
+    const baseline=Object.entries(s).map(([k,score])=>{const [unit,cat]=k.split('|');return {unit,cat,score};});
+    return (typeof learningAdjustWeakScores==='function'?learningAdjustWeakScores(baseline):baseline).sort((a,b)=>b.score-a.score);
   }
+  window.dailyWeakScores=weakScores;
   function genFor(unit,cat){ const m=MODULES[unit]; return m&&m.gens.find(g=>g.cat===cat); }
   /* 약점 훈련 세트: 약점 유형 가중 추출, 부족하면 시계·기본 연산으로 채움 */
   window.buildDailyWeakSet=function(n){
@@ -38,6 +40,10 @@
   function pickUnitOfDay(){
     const y=new Date(Date.now()-86400000); const yk=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');
     const yt=(DB.daily||{})[yk]; const yUnit=yt&&(yt.tasks.find(t=>t.id==='unit')||{}).unit;
+    // 이미 생성한 오늘 과제는 바꾸지 않음. 새 날짜의 단원부터 확인된 학교 진도를 우선 반영.
+    const school=typeof learningSchoolFocus==='function'?learningSchoolFocus():[];
+    const schoolUnits=mathUnits().filter(u=>school.includes(u.id));
+    if(schoolUnits.length) return schoolUnits.find(u=>u.id!==yUnit)||schoolUnits[0];
     const cands=mathUnits().filter(u=>u.id!=='time'&&u.id!==yUnit);
     cands.sort((a,b)=>{ const A=unitDB(a.id),B=unitDB(b.id); const accA=A.solved?A.correct/A.solved:0.5, accB=B.solved?B.correct/B.solved:0.5;
       return (A.clears-B.clears)||(accA-accB)||(Math.random()-0.5); });
@@ -49,7 +55,7 @@
     DB.daily=DB.daily||{}; if(DB.daily[dkey()]) return DB.daily[dkey()];
     const u=pickUnitOfDay(); const wrongPool=DB.wrong.filter(w=>mathUnits().some(m=>m.id===w.unitId));
     const tasks=[
-      {id:'weak',  title:'🎯 약점 훈련',        sub:`가장 많이 틀린 유형 ${WEAK_N()}문제`, n:WEAK_N(),  done:false, correct:0, total:0},
+      {id:'weak',  title:'🎯 맞춤 연습',        sub:`풀이 기록을 살펴 고른 ${WEAK_N()}문제`, n:WEAK_N(),  done:false, correct:0, total:0},
       {id:'time',  title:'🕰️ 시계 집중',        sub:`시각과 시간 ${TIME_N()}문제`,          n:TIME_N(),  done:false, correct:0, total:0, unit:'time'},
       ...(needTalk()?[{id:'talk', title:'🎤 선생님과 이야기', sub:'말로 답하는 3분 인터뷰', n:0, done:false, correct:0, total:0}]:[]),
       {id:'expr',  title:'✍️ 식 세우기',        sub:`상황을 식으로 ${EXPR_N()}문제 + 다른 방법으로`, n:EXPR_N(), done:false, correct:0, total:0},
@@ -111,7 +117,10 @@
   window.dailyCheckAll=function(){
     const D=todayTask(); if(!D||D.allDone) return false;
     if(!D.tasks.every(t=>t.done)) return false;
-    D.allDone=Date.now(); DB.dailyDoneEver=(DB.dailyDoneEver||0)+1;
+    D.allDone=Date.now();
+    // 사진 숙제가 뒤늦게 추가되어 allDone이 다시 열려도 같은 날짜 보상은 한 번만 지급.
+    if(D.reward){ saveDB(); syncSoon(); return true; }
+    DB.dailyDoneEver=(DB.dailyDoneEver||0)+1;
     const acc=D.tasks.filter(t=>t.total>0&&t.correct/t.total>=0.9).length;
     const streak=dailyStreak(); const sb=STREAK_BONUS[streak]||0;
     D.reward={base:5, acc, streak:sb, total:5+acc+sb};
@@ -188,7 +197,7 @@
     const week=days.slice(7); const wk=week.filter(x=>x.n).length, wkAll=week.filter(x=>x.all).length;
     const attempts=Object.values(DB.daily||{}).flatMap(d=>d.tasks.filter(t=>t.done&&t.total)); const acc=attempts.length?Math.round(attempts.reduce((s,t)=>s+t.correct/t.total,0)/attempts.length*100):null;
     const byType={}; attempts.forEach(t=>{ const id=t.id; byType[id]=byType[id]||{c:0,t:0,n:0}; byType[id].c+=t.correct; byType[id].t+=t.total; byType[id].n++; });
-    const names={weak:'🎯 약점 훈련',time:'🕰️ 시계',unit:'📘 단원 퀴즈',review:'🔁 다시 풀기'};
+    const names={weak:'🎯 맞춤 연습',time:'🕰️ 시계',unit:'📘 단원 퀴즈',review:'🔁 다시 풀기'};
     const cells=days.map(x=>{ const col=x.all?'#19a974':x.done?'#f39c12':x.n?'#e8503a':'#eee'; const lab=['일','월','화','수','목','금','토'][x.dt.getDay()];
       return `<div style="flex:1;text-align:center"><div title="${x.k}" style="height:34px;border-radius:8px;background:${col};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px">${x.n?x.done+'/'+x.n:''}</div><div style="font-size:10px;color:var(--soft)">${lab}</div></div>`; }).join('');
     return `<div class="card"><h3>🎯 과제 성취도</h3>
